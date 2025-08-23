@@ -1,0 +1,30 @@
+[package]
+name = "bb8_surrealdb_any"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+"kv-surrealkv" = ["surrealdb/kv-surrealkv"]
+"protocol-ws" = ["surrealdb/protocol-ws"]
+"rustls" = ["surrealdb/rustls"]
+"allocation-tracking" = ["surrealdb/allocation-tracking"]
+"allocator" = ["surrealdb/allocator"]
+"arbitrary" = ["surrealdb/arbitrary"]
+"http" = ["surrealdb/http"]
+"jwks" = ["surrealdb/jwks"]
+"kv-fdb" = ["surrealdb/kv-fdb"]
+"kv-fdb-7_1" = ["surrealdb/kv-fdb-7_1"]
+"kv-fdb-7_3" = ["surrealdb/kv-fdb-7_3"]
+"kv-indxdb" = ["surrealdb/kv-indxdb"]
+"kv-mem" = ["surrealdb/kv-mem"]
+"kv-rocksdb" = ["surrealdb/kv-rocksdb"]
+"kv-surrealcs" = ["surrealdb/kv-surrealcs"]
+"kv-tikv" = ["surrealdb/kv-tikv"]
+"ml" = ["surrealdb/ml"]
+"native-tls" = ["surrealdb/native-tls"]
+"protocol-http" = ["surrealdb/protocol-http"]
+"scripting" = ["surrealdb/scripting"]
+
+[dependencies]
+bb8 = "0.9.0"
+surrealdb = "2.3.6"

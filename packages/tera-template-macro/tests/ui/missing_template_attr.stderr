@@ -1,0 +1,7 @@
+error: The #[template(path = "...")] is required.
+ --> tests/ui/missing_template_attr.rs:4:1
+  |
+4 | / struct Smoke {
+5 | |     hello: String
+6 | | }
+  | |_^

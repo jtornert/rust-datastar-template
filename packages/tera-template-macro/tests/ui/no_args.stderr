@@ -1,0 +1,5 @@
+error: Expected attribute argument `path` in parentheses: `#[template(path = "index.html")]`
+ --> tests/ui/no_args.rs:4:1
+  |
+4 | #[template]
+  | ^^^^^^^^^^^

@@ -1,0 +1,13 @@
+@import url("color-scheme-light.css") layer(theme) (scripting: none) and (prefers-color-scheme: light),
+(scripting: enabled);
+@import url("color-scheme-dark.css") layer(theme) (scripting: none) and (prefers-color-scheme: dark),
+(scripting: enabled);
+
+@layer base, theme;
+
+@layer base {
+    html {
+        font-family: sans-serif;
+        line-height: 1.5;
+    }
+}

@@ -1,0 +1,21 @@
+{% macro form() %}
+
+{% if auth_type == "login" %}
+    {% set other = "signup" %}
+{% else %}
+    {% set other = "login" %}
+{% endif %}
+
+<ul>
+    {% for error in errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+</ul>
+<form method="post">
+    <input type="text" name="username">
+    <input type="password" name="password">
+    <button type="submit">Auth</button>
+</form>
+<a href="/{{ other }}">{{ t(locale=locale, key=other) }}</a>
+<a href="/">{{ t(locale=locale, key="home") }}</a>
+{% endmacro %}

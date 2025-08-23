@@ -1,0 +1,5 @@
+error: The assignment to `path` must be a string literal.
+ --> tests/ui/non_str_lit.rs:4:19
+  |
+4 | #[template(path = 69)]
+  |                   ^^

@@ -1,0 +1,12 @@
+{% import "macros/auth.j2" as auth %}
+
+{% extends "layouts/base.j2" %}
+
+{% block head %}
+<title>{{ t(locale=locale, key="login") }}</title>
+{% endblock head %}
+
+{% block body %}
+<h1>{{ t(locale=locale, key="login") }}</h1>
+{{ auth::form() }}
+{% endblock body %}

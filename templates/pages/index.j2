@@ -1,0 +1,10 @@
+{% extends "layouts/base.j2" %}
+
+{% block head %}
+<title>{{ t(locale=locale, key="home") }}</title>
+{% endblock head %}
+
+{% block body %}
+<h1>{{ t(locale=locale, key="home") }}</h1>
+<p><a href="/app">{{ t(locale=locale, key="app") }}</a></p>
+{% endblock body %}

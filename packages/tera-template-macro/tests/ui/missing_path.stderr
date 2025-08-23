@@ -1,0 +1,5 @@
+error: Expected `path`.
+ --> tests/ui/missing_path.rs:4:12
+  |
+4 | #[template(not_path = "hello world")]
+  |            ^^^^^^^^

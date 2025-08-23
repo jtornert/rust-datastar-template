@@ -1,0 +1,36 @@
+[package]
+name = "rust-datastar-template"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "server"
+
+[dependencies]
+ammonia = "4.1.1"
+async-stream = "0.3.6"
+axum = { version = "0.8.4", features = ["macros"] }
+axum-extra = { version = "0.10.1", features = ["cookie-private", "form"] }
+base64 = "0.22.1"
+bb8 = "0.9.0"
+bb8_surrealdb_any = { path = "packages/bb8_surrealdb_any" }
+datastar = { version = "0.3.1", features = ["axum"] }
+dotenvy = "0.15.7"
+envy = "0.4.2"
+futures = "0.3.31"
+glob = "0.3.2"
+notify = "8.1.0"
+serde = { version = "1.0.219", features = ["derive"] }
+strum = { version = "0.27.2", features = ["derive"] }
+surrealdb = { version = "2.3.6", features = ["kv-mem", "kv-tikv"] }
+tera = "1.20.0"
+tera-template-macro = { path = "packages/tera-template-macro" }
+tokio = { version = "1.46.1", features = ["rt-multi-thread", "net", "macros"] }
+tower = "0.5.2"
+tower-http = { version = "0.6.6", features = ["fs"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[dev-dependencies]
+mime = "0.3.17"
+serde_urlencoded = "0.7.1"
