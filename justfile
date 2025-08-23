@@ -4,9 +4,6 @@ set dotenv-load := true
 dev:
     cargo watch -c -w src -w sql -x run
 
-quick:
-    cargo watch -c -w examples -x "test --example dev_quick_checker -- --nocapture --color always"
-
 test name="":
     RUST_LOG=server=debug cargo watch -c -w src -w sql -w templates -x "test -q {{ name }}"
 
@@ -48,5 +45,5 @@ setup:
     curl -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
     cargo install cargo-watch
 
-clear:
+clean:
     rm -rf data target history.txt
