@@ -26,10 +26,9 @@ Start tikv cluster and development server (persisted):
 # Running the tikv cluster requires the tikv `DB_URL` environment variable.
 just pd # terminal 1
 just tikv # terminal 2
-just db # terminal 3
-just migrate # terminal 4, imports the database schema
-just sql # terminal 4, connects to SurrealDB to run SQL statements
-just dev # terminal 4
+just migrate # terminal 3, imports the database schema
+just sql # terminal 3, connects to SurrealDB to run SQL statements
+just dev # terminal 3
 ```
 
 Run tests:
