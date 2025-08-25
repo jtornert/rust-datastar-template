@@ -51,35 +51,37 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
 
     #[cfg(debug_assertions)]
     {
-        let db = pool.get().await.map_err(|e| {
-            tracing::error!(?e);
-            crate::Error::PoolGetConnectionFailed
-        })?;
-
-        tracing::debug!("importing into memory");
-
-        db.use_ns(&CONFIG.db_namespace)
-            .use_db(&CONFIG.db_database)
-            .await
-            .map_err(|e| {
+        if std::env::var("DB_URL").unwrap() == "memory" {
+            let db = pool.get().await.map_err(|e| {
                 tracing::error!(?e);
-                crate::Error::DbUseNsDbFailed
+                crate::Error::PoolGetConnectionFailed
             })?;
 
-        for entry in glob::glob("sql/*.surql")
-            .unwrap()
-            .chain(glob::glob("sql/repo/*.surql").unwrap())
-            .chain(glob::glob("sql/dev/*.surql").unwrap())
-        {
-            match entry {
-                Err(e) => {
+            tracing::debug!("importing into memory");
+
+            db.use_ns(&CONFIG.db_namespace)
+                .use_db(&CONFIG.db_database)
+                .await
+                .map_err(|e| {
                     tracing::error!(?e);
-                }
-                Ok(path) => {
-                    db.import(path).await.map_err(|e| {
+                    crate::Error::DbUseNsDbFailed
+                })?;
+
+            for entry in glob::glob("sql/*.surql")
+                .unwrap()
+                .chain(glob::glob("sql/repo/*.surql").unwrap())
+                .chain(glob::glob("sql/dev/*.surql").unwrap())
+            {
+                match entry {
+                    Err(e) => {
                         tracing::error!(?e);
-                        crate::Error::MemoryDatabaseImportFailed
-                    })?;
+                    }
+                    Ok(path) => {
+                        db.import(path).await.map_err(|e| {
+                            tracing::error!(?e);
+                            crate::Error::MemoryDatabaseImportFailed
+                        })?;
+                    }
                 }
             }
         }
