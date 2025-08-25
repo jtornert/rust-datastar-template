@@ -3,7 +3,7 @@
 First time setup:
 
 ```bash
-just setup
+just setup # installs SurrealDB, tiup, and cargo-watch
 ```
 
 Create `.env` from `.env.example` and run:
@@ -20,10 +20,9 @@ Start development server (in memory):
 just dev
 ```
 
-Start tikv cluster and development server (persisted):
+Running the tikv cluster requires the tikv `DB_URL` environment variable. Start tikv cluster and development server (persisted):
 
 ```bash
-# Running the tikv cluster requires the tikv `DB_URL` environment variable.
 just pd # terminal 1
 just tikv # terminal 2
 just db # terminal 3
