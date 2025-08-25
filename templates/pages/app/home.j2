@@ -6,5 +6,5 @@
 
 {% block body %}
 <h1>{{ t(locale=locale, key="app") }}</h1>
-<p>{{ t(locale=locale, key="logged_in_as") }} {{ user.name }}</p>
+<p>{{ t(locale=locale, key="logged_in_as", username=user.name) }}</p>
 {% endblock body %}
