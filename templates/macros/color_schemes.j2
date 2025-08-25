@@ -1,0 +1,10 @@
+{% macro switcher() %}
+<select>
+    <option value="auto">{{ t(locale=locale, key="auto") }}</option>
+    <option value="light">{{ t(locale=locale, key="light") }}</option>
+    <option value="dark">{{ t(locale=locale, key="dark") }}</option>
+</select>
+<script>
+    colorSchemeSwitcher(document.currentScript.previousElementSibling);
+</script>
+{% endmacro %}
