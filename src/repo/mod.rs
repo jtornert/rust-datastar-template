@@ -66,7 +66,11 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
                 crate::Error::DbUseNsDbFailed
             })?;
 
-        for entry in glob::glob("sql/**/*.surql").unwrap() {
+        for entry in glob::glob("sql/*.surql")
+            .unwrap()
+            .chain(glob::glob("sql/repo/*.surql").unwrap())
+            .chain(glob::glob("sql/dev/*.surql").unwrap())
+        {
             match entry {
                 Err(e) => {
                     tracing::error!(?e);

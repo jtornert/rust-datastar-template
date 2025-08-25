@@ -1,0 +1,1 @@
+fn::auth::signup("test", "test");
