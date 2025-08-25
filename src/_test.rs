@@ -51,7 +51,10 @@ pub async fn create_test_pool() -> Result<bb8::Pool<ConnectionManager<String>>, 
             .use_db(&CONFIG.db_database)
             .await?;
 
-        for entry in glob::glob("sql/**/*.surql").unwrap() {
+        for entry in glob::glob("sql/*.surql")
+            .unwrap()
+            .chain(glob::glob("sql/repo/*.surql").unwrap())
+        {
             match entry {
                 Err(e) => {
                     tracing::error!(?e);
