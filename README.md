@@ -27,6 +27,7 @@ just pd # terminal 1
 just tikv # terminal 2
 just db # terminal 3
 just migrate # terminal 4, imports the database schema
+just data <name> # terminal 4, imports any .surql file in the sql/dev folder
 just sql # terminal 4, connects to SurrealDB to run SQL statements
 just dev # terminal 4
 ```
