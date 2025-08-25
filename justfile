@@ -5,7 +5,7 @@ dev:
     cargo watch -c -w src -w sql -x run
 
 test name="":
-    RUST_LOG=server=debug cargo watch -c -w src -w sql -w templates -x "test -q {{ name }}"
+    RUST_LOG=server=debug cargo watch -c -w src -w sql -w templates -x "test {{ name }}"
 
 check:
     cargo clippy --release
