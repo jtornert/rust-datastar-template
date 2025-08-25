@@ -37,6 +37,9 @@ db log="info":
 migrate:
     RUST_LOG=surreal::cli::import=info find sql -type f -name "*.surql" -not -path "sql/dev/*.surql" -exec surreal import -e $DB_URL --user $DB_USERNAME --pass $DB_PASSWORD --namespace $DB_NAMESPACE --database $DB_DATABASE {} \;
 
+data name:
+    RUST_LOG=surreal::cli::import=info surreal import -e $DB_URL --user $DB_USERNAME --pass $DB_PASSWORD --namespace $DB_NAMESPACE --database $DB_DATABASE "./sql/dev/{{ name }}.surql"
+
 sql:
     RUST_LOG=info surreal sql -e $DB_URL --user $DB_USERNAME --pass $DB_PASSWORD --namespace $DB_NAMESPACE --database $DB_DATABASE --pretty
 
