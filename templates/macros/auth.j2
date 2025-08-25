@@ -1,9 +1,9 @@
 {% macro form() %}
 
 {% if auth_type == "login" %}
-    {% set other = "signup" %}
+{% set other = "signup" %}
 {% else %}
-    {% set other = "login" %}
+{% set other = "login" %}
 {% endif %}
 
 <ul>
