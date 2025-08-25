@@ -99,6 +99,16 @@ async fn db_extension(State(state): State<AppState>, mut request: Request, next:
         }
         Ok(db) => db,
     };
+
+    if let Err(e) = db
+        .use_ns(&std::env::var("DB_NAMESPACE").unwrap_or_else(|_| "test".into()))
+        .use_db(&std::env::var("DB_DATABASE").unwrap_or_else(|_| "test".into()))
+        .await
+    {
+        tracing::error!(?e);
+        return Html(ServiceUnavailable {}.render(TEMPLATES.read().await, "en-GB")).into_response();
+    }
+
     let db = Arc::new(db);
 
     request.extensions_mut().insert(db.clone());

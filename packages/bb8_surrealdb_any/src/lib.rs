@@ -19,13 +19,7 @@ impl<T: IntoEndpoint + Clone + Send + Sync + 'static> ManageConnection for Conne
     type Error = surrealdb::Error;
 
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
-        let conn = surrealdb::engine::any::connect(self.address.clone()).await?;
-
-        conn.use_ns(&std::env::var("DB_NAMESPACE").unwrap_or_else(|_| "test".into()))
-            .use_db(&std::env::var("DB_DATABASE").unwrap_or_else(|_| "test".into()))
-            .await?;
-
-        Ok(conn)
+        Ok(surrealdb::engine::any::connect(self.address.clone()).await?)
     }
 
     async fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> {
