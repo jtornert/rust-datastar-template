@@ -13,8 +13,8 @@ check:
 build:
     cargo build --release
 
-run:
-    cargo run --release
+run: build
+    ./target/release/rust-datastar-template
 
 example name:
     cargo watch -cq -w examples -x "run --example {{ name }}"

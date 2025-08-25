@@ -16,7 +16,7 @@ use axum_extra::extract::{PrivateCookieJar, cookie::Key};
 use bb8::Pool;
 use bb8_surrealdb_any::ConnectionManager;
 use tera::{Context, Tera};
-use tokio::sync::RwLock;
+use tokio::{net::TcpListener, sync::RwLock};
 use tower_http::services::ServeDir;
 
 use crate::{
@@ -101,8 +101,8 @@ async fn db_extension(State(state): State<AppState>, mut request: Request, next:
     };
 
     if let Err(e) = db
-        .use_ns(&std::env::var("DB_NAMESPACE").unwrap_or_else(|_| "test".into()))
-        .use_db(&std::env::var("DB_DATABASE").unwrap_or_else(|_| "test".into()))
+        .use_ns(std::env::var("DB_NAMESPACE").unwrap_or_else(|_| "test".into()))
+        .use_db(std::env::var("DB_DATABASE").unwrap_or_else(|_| "test".into()))
         .await
     {
         tracing::error!(?e);
@@ -185,4 +185,23 @@ pub fn create_router(pool: Pool<ConnectionManager<String>>) -> Router {
         .layer(middleware::map_response(crate::_dev::no_cache));
 
     router
+}
+
+/// # Errors
+pub async fn start() -> crate::Result<()> {
+    let pool = crate::repo::create_pool().await?;
+    let router = create_router(pool);
+    let listener = TcpListener::bind(&CONFIG.listen_url).await.map_err(|e| {
+        tracing::error!(?e);
+        crate::Error::TcpListenerInitFailed
+    })?;
+
+    tracing::info!("listening on http://{}", &CONFIG.listen_url);
+
+    axum::serve(listener, router).await.map_err(|e| {
+        tracing::error!(?e);
+        crate::Error::ServerStartFailed
+    })?;
+
+    Ok(())
 }

@@ -1,10 +1,8 @@
-use server::CONFIG;
-use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenvy::dotenv().unwrap();
+    dotenvy::dotenv()?;
 
     tracing_subscriber::registry()
         .with(
@@ -16,13 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let pool = server::create_pool().await?;
-    let router = server::create_router(pool);
-    let listener = TcpListener::bind(&CONFIG.listen_url).await?;
-
-    tracing::info!("listening on http://{}", &CONFIG.listen_url);
-
-    axum::serve(listener, router).await?;
+    server::start().await?;
 
     Ok(())
 }

@@ -11,7 +11,9 @@ pub struct Config {
     pub db_url: String,
     pub db_namespace: String,
     pub db_database: String,
+    #[allow(dead_code)]
     pub db_username: String,
+    #[allow(dead_code)]
     pub db_password: String,
     pub listen_url: String,
 }

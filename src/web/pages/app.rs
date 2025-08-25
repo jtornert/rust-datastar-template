@@ -44,7 +44,8 @@ pub mod home {
 
         use crate::{
             _test::{TestResult, create_test_pool, credentials, setup_test},
-            create_router, repo,
+            repo,
+            web::create_router,
         };
 
         #[tokio::test]

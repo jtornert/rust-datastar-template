@@ -12,6 +12,8 @@ pub enum Error {
     PoolInitFailed,
     PoolGetConnectionFailed,
     DbUseNsDbFailed,
+    TcpListenerInitFailed,
+    ServerStartFailed,
     #[cfg(debug_assertions)]
     MemoryDatabaseImportFailed,
     #[cfg(not(debug_assertions))]

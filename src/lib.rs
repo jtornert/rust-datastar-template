@@ -32,7 +32,6 @@ mod models;
 mod repo;
 mod web;
 
-pub use config::CONFIG;
-pub use error::{Error, Result};
-pub use repo::create_pool;
-pub use web::create_router;
+use config::CONFIG;
+use error::{Error, Result};
+pub use web::start;
