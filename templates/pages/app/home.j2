@@ -1,10 +1,10 @@
 {% extends "layouts/base.j2" %}
 
 {% block head %}
-<title>App</title>
+<title>{{ t(locale=locale, key="app") }}</title>
 {% endblock head %}
 
 {% block body %}
-<h1>App</h1>
-<p>Logged in as: {{ user.name }}</p>
+<h1>{{ t(locale=locale, key="app") }}</h1>
+<p>{{ t(locale=locale, key="logged_in_as") }} {{ user.name }}</p>
 {% endblock body %}
