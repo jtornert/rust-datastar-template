@@ -3681,7 +3681,6 @@ dependencies = [
  "datastar",
  "dotenvy",
  "envy",
- "futures",
  "glob",
  "mime",
  "notify",

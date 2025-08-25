@@ -17,7 +17,6 @@ bb8_surrealdb_any = { path = "packages/bb8_surrealdb_any" }
 datastar = { version = "0.3.1", features = ["axum"] }
 dotenvy = "0.15.7"
 envy = "0.4.2"
-futures = "0.3.31"
 glob = "0.3.2"
 notify = "8.1.0"
 serde = { version = "1.0.219", features = ["derive"] }
