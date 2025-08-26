@@ -72,6 +72,7 @@ pub mod signup {
     struct Page {
         errors: Vec<String>,
         auth_type: AuthType,
+        username: String,
     }
 
     pub async fn get() -> impl IntoResponse {
@@ -79,6 +80,7 @@ pub mod signup {
             Page {
                 errors: Vec::new(),
                 auth_type: AuthType::SignUp,
+                username: String::new(),
             }
             .render(TEMPLATES.read().await, "en-GB"),
         )
@@ -91,17 +93,19 @@ pub mod signup {
         match repo::auth::signup(&db, body).await {
             Err(repo::Error::UsernameTaken(username)) => Err(Html(
                 Page {
-                    errors: vec![format!("username {username} already taken")],
+                    errors: vec!["username_already_taken".into()],
                     auth_type: AuthType::SignUp,
+                    username: username.trim_matches('\'').into(),
                 }
                 .render(TEMPLATES.read().await, "en-GB"),
             )
             .into_response()),
 
-            Err(repo::Error::InvalidUsername) => Err(Html(
+            Err(repo::Error::InvalidUsername(username)) => Err(Html(
                 Page {
-                    errors: vec![format!("username invalid")],
+                    errors: vec!["username_invalid".into()],
                     auth_type: AuthType::SignUp,
+                    username: username.trim_matches('\'').into(),
                 }
                 .render(TEMPLATES.read().await, "en-GB"),
             )
@@ -109,8 +113,9 @@ pub mod signup {
 
             Err(_) => Err(Html(
                 Page {
-                    errors: vec!["something went wrong".into()],
+                    errors: vec!["something_went_wrong".into()],
                     auth_type: AuthType::SignUp,
+                    username: String::new(),
                 }
                 .render(TEMPLATES.read().await, "en-GB"),
             )
@@ -206,6 +211,7 @@ pub mod login {
 
     use axum::{
         Extension,
+        extract::Query,
         response::{Html, IntoResponse, Redirect, Response},
     };
     use axum_extra::extract::{
@@ -217,7 +223,7 @@ pub mod login {
 
     use crate::{
         repo::{self, Db, auth::Credentials},
-        web::{SESSION_COOKIE_NAME, TEMPLATES, pages::public::AuthType},
+        web::{SESSION_COOKIE_NAME, TEMPLATES, pages::public::AuthType, queries::RedirectToQuery},
     };
 
     #[derive(Serialize, TeraTemplate)]
@@ -225,6 +231,7 @@ pub mod login {
     struct Page {
         errors: Vec<String>,
         auth_type: AuthType,
+        username: String,
     }
 
     pub async fn get() -> impl IntoResponse {
@@ -232,6 +239,7 @@ pub mod login {
             Page {
                 errors: Vec::new(),
                 auth_type: AuthType::LogIn,
+                username: String::new(),
             }
             .render(TEMPLATES.read().await, "en-GB"),
         )
@@ -239,15 +247,17 @@ pub mod login {
 
     pub async fn post(
         secrets: PrivateCookieJar,
+        Query(query): Query<RedirectToQuery>,
         Extension(db): Extension<Arc<Db<'_>>>,
         Form(body): Form<Credentials>,
     ) -> Result<impl IntoResponse, Response> {
         let token = match repo::auth::login(&db, body).await {
-            Err(repo::error::Error::CredentialsInvalid) => {
+            Err(repo::error::Error::CredentialsInvalid(username)) => {
                 return Err(Html(
                     Page {
-                        errors: vec!["credentials invalid".into()],
+                        errors: vec!["credentials_invalid".into()],
                         auth_type: AuthType::LogIn,
+                        username,
                     }
                     .render(TEMPLATES.read().await, "en-GB"),
                 )
@@ -257,8 +267,9 @@ pub mod login {
                 tracing::error!(?e);
                 return Err(Html(
                     Page {
-                        errors: vec!["something went wrong".into()],
+                        errors: vec!["something_went_wrong".into()],
                         auth_type: AuthType::LogIn,
+                        username: String::new(),
                     }
                     .render(TEMPLATES.read().await, "en-GB"),
                 )
@@ -274,7 +285,13 @@ pub mod login {
                     .secure(true)
                     .same_site(SameSite::Strict),
             ),
-            Redirect::to("/"),
+            Redirect::to(&format!(
+                "/{}",
+                query
+                    .redirect_to
+                    .as_ref()
+                    .map_or("", |uri| uri.trim_start_matches('/'))
+            )),
         ))
     }
 

@@ -24,19 +24,15 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
         return Err(crate::Error::MemoryDatabaseInRelease);
     }
 
-    #[allow(unused_mut)]
-    let mut min_idle = 2;
     #[cfg(debug_assertions)]
-    if CONFIG.db_url == "memory" {
-        min_idle = 1;
-    }
+    let min_idle = if CONFIG.db_url == "memory" { 1 } else { 2 };
+    #[cfg(not(debug_assertions))]
+    let min_idle = 2;
 
-    #[allow(unused_mut)]
-    let mut max_size = 16;
     #[cfg(debug_assertions)]
-    if CONFIG.db_url == "memory" {
-        max_size = 1;
-    }
+    let max_size = if CONFIG.db_url == "memory" { 1 } else { 16 };
+    #[cfg(not(debug_assertions))]
+    let max_size = 16;
 
     let pool = bb8::Pool::builder()
         .connection_timeout(Duration::from_secs(3))
@@ -46,15 +42,16 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
         .await
         .map_err(|e| {
             tracing::error!(?e);
-            crate::Error::PoolInitFailed
+            crate::Error::PoolInit
         })?;
 
     #[cfg(debug_assertions)]
+    #[allow(clippy::unwrap_used)]
     {
         if std::env::var("DB_URL").unwrap() == "memory" {
             let db = pool.get().await.map_err(|e| {
                 tracing::error!(?e);
-                crate::Error::PoolGetConnectionFailed
+                crate::Error::PoolGetConnection
             })?;
 
             tracing::debug!("importing into memory");
@@ -64,7 +61,7 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
                 .await
                 .map_err(|e| {
                     tracing::error!(?e);
-                    crate::Error::DbUseNsDbFailed
+                    crate::Error::DbUseNsDb
                 })?;
 
             for entry in glob::glob("sql/*.surql")
@@ -79,7 +76,7 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
                     Ok(path) => {
                         db.import(path).await.map_err(|e| {
                             tracing::error!(?e);
-                            crate::Error::MemoryDatabaseImportFailed
+                            crate::Error::MemoryDatabaseImport
                         })?;
                     }
                 }

@@ -5,8 +5,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
     Surreal,
     UsernameTaken(String),
-    InvalidUsername,
-    CredentialsInvalid,
+    InvalidUsername(String),
+    CredentialsInvalid(String),
 }
 
 impl Display for Error {

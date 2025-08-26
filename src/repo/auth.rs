@@ -40,7 +40,10 @@ impl Credentials {
 
 pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
     #[cfg(any(debug_assertions, test))]
-    db.invalidate().await.unwrap();
+    db.invalidate().await.map_err(|e| {
+        tracing::error!(?e);
+        Error::Surreal
+    })?;
     #[cfg(not(debug_assertions))]
     {
         use crate::CONFIG;
@@ -81,7 +84,7 @@ pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
         }
         Err(surrealdb::Error::Db(surrealdb::error::Db::FieldValue { value, field, .. })) => {
             if field.to_string() == "name" {
-                return Err(Error::InvalidUsername);
+                return Err(Error::InvalidUsername(value));
             }
             tracing::error!("{} = {}", field, value);
             Err(Error::Surreal)
@@ -95,6 +98,8 @@ pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
 }
 
 pub async fn login(db: &Db<'_>, credentials: Credentials) -> Result<String> {
+    let username = credentials.username.clone();
+
     db.signin(Record {
         namespace: &CONFIG.db_namespace,
         database: &CONFIG.db_database,
@@ -104,7 +109,7 @@ pub async fn login(db: &Db<'_>, credentials: Credentials) -> Result<String> {
     .await
     .map_err(|e| {
         if matches!(e, surrealdb::Error::Db(surrealdb::error::Db::NoRecordFound)) {
-            Error::CredentialsInvalid
+            Error::CredentialsInvalid(username.unwrap_or_default())
         } else {
             tracing::error!(?e);
             Error::Surreal
@@ -136,7 +141,7 @@ pub async fn authenticate(db: &Db<'_>, token: &str) -> Result<()> {
     .await
     .map_err(|e| {
         tracing::error!(?e);
-        Error::CredentialsInvalid
+        Error::CredentialsInvalid(String::new())
     })?;
 
     Ok(())

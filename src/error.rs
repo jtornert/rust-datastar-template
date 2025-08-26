@@ -9,13 +9,13 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    PoolInitFailed,
-    PoolGetConnectionFailed,
-    DbUseNsDbFailed,
-    TcpListenerInitFailed,
-    ServerStartFailed,
+    PoolInit,
+    PoolGetConnection,
+    DbUseNsDb,
+    TcpListenerInit,
+    ServerStart,
     #[cfg(debug_assertions)]
-    MemoryDatabaseImportFailed,
+    MemoryDatabaseImport,
     #[cfg(not(debug_assertions))]
     MemoryDatabaseInRelease,
 }

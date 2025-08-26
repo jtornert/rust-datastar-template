@@ -1,4 +1,5 @@
 mod pages;
+mod queries;
 
 use std::{
     collections::HashMap,
@@ -123,12 +124,20 @@ async fn authenticator(
     next: Next,
 ) -> Response {
     let Some(cookie) = secrets.get(SESSION_COOKIE_NAME) else {
-        return Redirect::to("/login").into_response();
+        return Redirect::to(&format!(
+            "/login?redirect_to=/{}",
+            request.uri().to_string().trim_start_matches('/')
+        ))
+        .into_response();
     };
 
     if let Err(e) = repo::auth::authenticate(&db, cookie.value()).await {
         tracing::error!(?e);
-        return Redirect::to("/login").into_response();
+        return Redirect::to(&format!(
+            "/login?redirect_to=/{}",
+            request.uri().to_string().trim_start_matches('/')
+        ))
+        .into_response();
     }
 
     next.run(request).await
@@ -193,14 +202,14 @@ pub async fn start() -> crate::Result<()> {
     let router = create_router(pool);
     let listener = TcpListener::bind(&CONFIG.listen_url).await.map_err(|e| {
         tracing::error!(?e);
-        crate::Error::TcpListenerInitFailed
+        crate::Error::TcpListenerInit
     })?;
 
     tracing::info!("listening on http://{}", &CONFIG.listen_url);
 
     axum::serve(listener, router).await.map_err(|e| {
         tracing::error!(?e);
-        crate::Error::ServerStartFailed
+        crate::Error::ServerStart
     })?;
 
     Ok(())

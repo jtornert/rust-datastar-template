@@ -1,5 +1,4 @@
 {% macro form() %}
-
 {% if auth_type == "login" %}
 {% set other = "signup" %}
 {% else %}
@@ -8,12 +7,12 @@
 
 <ul>
     {% for error in errors %}
-    <li>{{ error }}</li>
+    <li>{{ t(locale=locale, key=error) }}</li>
     {% endfor %}
 </ul>
 <form method="post">
-    <input type="text" name="username">
-    <input type="password" name="password">
+    <input type="text" name="username" value="{{ username }}" required>
+    <input type="password" name="password" required>
     <button type="submit">Auth</button>
 </form>
 <a href="/{{ other }}">{{ t(locale=locale, key=other) }}</a>
