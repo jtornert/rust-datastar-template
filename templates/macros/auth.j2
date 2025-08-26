@@ -5,12 +5,14 @@
 {% set other = "login" %}
 {% endif %}
 
-<ul>
+<ul data-ref="errors">
     {% for error in errors %}
     <li>{{ t(locale=locale, key=error) }}</li>
     {% endfor %}
 </ul>
-<form method="post">
+<p data-show="$fetching">...</p>
+<form method="post" data-on-submit="$errors.remove(); @post(window.location.href, {contentType: 'form'})"
+    data-indicator-fetching>
     <input type="text" name="username" value="{{ username }}" required>
     <input type="password" name="password" required>
     <button type="submit">Auth</button>
