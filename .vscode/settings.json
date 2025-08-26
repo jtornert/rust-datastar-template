@@ -1,4 +1,5 @@
 {
+    "rust-analyzer.check.command": "clippy",
     "emmet.includeLanguages": {
         "jinja-html": "html"
     }
