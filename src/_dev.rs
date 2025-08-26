@@ -45,7 +45,7 @@ pub async fn watcher() -> impl IntoResponse {
 
                         yield Ok::<_, Infallible>(ExecuteScript::new(
                             std::fs::read_to_string(
-                                std::path::Path::new("events")
+                                std::path::Path::new("templates").join("events")
                                     .join("reload.js")
                                 )
                                 .unwrap(),
@@ -55,7 +55,7 @@ pub async fn watcher() -> impl IntoResponse {
                     "js" => {
                         yield Ok::<_, Infallible>(ExecuteScript::new(
                             std::fs::read_to_string(
-                                std::path::Path::new("events")
+                                std::path::Path::new("templates").join("events")
                                     .join("reload.js")
                             )
                                 .unwrap(),

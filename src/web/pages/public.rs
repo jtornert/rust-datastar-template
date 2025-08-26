@@ -56,6 +56,8 @@ pub mod signup {
 
     use axum::{
         Extension,
+        extract::Query,
+        http::{HeaderMap, HeaderValue, header::CONTENT_TYPE},
         response::{Html, IntoResponse, Redirect, Response},
     };
     use axum_extra::extract::Form;
@@ -64,7 +66,7 @@ pub mod signup {
 
     use crate::{
         repo::{self, Db, auth::Credentials},
-        web::{TEMPLATES, pages::public::AuthType},
+        web::{TEMPLATES, events, pages::public::AuthType, queries::RedirectToQuery},
     };
 
     #[derive(Serialize, TeraTemplate)]
@@ -73,14 +75,16 @@ pub mod signup {
         errors: Vec<String>,
         auth_type: AuthType,
         username: String,
+        redirect_to: Option<String>,
     }
 
-    pub async fn get() -> impl IntoResponse {
+    pub async fn get(Query(query): Query<RedirectToQuery>) -> impl IntoResponse {
         Html(
             Page {
                 errors: Vec::new(),
                 auth_type: AuthType::SignUp,
                 username: String::new(),
+                redirect_to: query.redirect_to,
             }
             .render(TEMPLATES.read().await, "en-GB"),
         )
@@ -88,14 +92,17 @@ pub mod signup {
 
     pub async fn post(
         Extension(db): Extension<Arc<Db<'_>>>,
+        headers: HeaderMap,
+        Query(query): Query<RedirectToQuery>,
         Form(body): Form<Credentials>,
-    ) -> Result<impl IntoResponse, Response> {
+    ) -> Result<Response, Response> {
         match repo::auth::signup(&db, body).await {
             Err(repo::Error::UsernameTaken(username)) => Err(Html(
                 Page {
                     errors: vec!["username_already_taken".into()],
                     auth_type: AuthType::SignUp,
                     username: username.trim_matches('\'').into(),
+                    redirect_to: query.redirect_to,
                 }
                 .render(TEMPLATES.read().await, "en-GB"),
             )
@@ -106,6 +113,7 @@ pub mod signup {
                     errors: vec!["username_invalid".into()],
                     auth_type: AuthType::SignUp,
                     username: username.trim_matches('\'').into(),
+                    redirect_to: query.redirect_to,
                 }
                 .render(TEMPLATES.read().await, "en-GB"),
             )
@@ -116,12 +124,44 @@ pub mod signup {
                     errors: vec!["something_went_wrong".into()],
                     auth_type: AuthType::SignUp,
                     username: String::new(),
+                    redirect_to: query.redirect_to,
                 }
                 .render(TEMPLATES.read().await, "en-GB"),
             )
             .into_response()),
 
-            _ => Ok(Redirect::to("/login")),
+            Ok(()) => {
+                let redirect_to = format!(
+                    "/login{}",
+                    query
+                        .redirect_to
+                        .as_ref()
+                        .map_or_else(String::new, |uri| format!(
+                            "?redirect_to=/{}",
+                            uri.trim_start_matches('/')
+                        ))
+                );
+
+                if headers
+                    .get("datastar-request")
+                    .and_then(|h| h.to_str().map(|v| v == "true").ok())
+                    .unwrap_or(false)
+                {
+                    let mut response_headers = HeaderMap::new();
+
+                    response_headers
+                        .insert(CONTENT_TYPE, HeaderValue::from_static("text/javascript"));
+
+                    Ok((
+                        response_headers,
+                        events::Redirect { href: redirect_to }
+                            .render(TEMPLATES.read().await, "en-GB"),
+                    )
+                        .into_response())
+                } else {
+                    Ok(Redirect::to(&redirect_to).into_response())
+                }
+            }
         }
     }
 
@@ -232,14 +272,16 @@ pub mod login {
         errors: Vec<String>,
         auth_type: AuthType,
         username: String,
+        redirect_to: Option<String>,
     }
 
-    pub async fn get() -> impl IntoResponse {
+    pub async fn get(Query(query): Query<RedirectToQuery>) -> impl IntoResponse {
         Html(
             Page {
                 errors: Vec::new(),
                 auth_type: AuthType::LogIn,
                 username: String::new(),
+                redirect_to: query.redirect_to,
             }
             .render(TEMPLATES.read().await, "en-GB"),
         )
@@ -258,6 +300,7 @@ pub mod login {
                         errors: vec!["credentials_invalid".into()],
                         auth_type: AuthType::LogIn,
                         username,
+                        redirect_to: query.redirect_to,
                     }
                     .render(TEMPLATES.read().await, "en-GB"),
                 )
@@ -270,6 +313,7 @@ pub mod login {
                         errors: vec!["something_went_wrong".into()],
                         auth_type: AuthType::LogIn,
                         username: String::new(),
+                        redirect_to: query.redirect_to,
                     }
                     .render(TEMPLATES.read().await, "en-GB"),
                 )

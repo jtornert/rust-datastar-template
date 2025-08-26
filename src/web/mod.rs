@@ -1,3 +1,4 @@
+mod events;
 mod pages;
 mod queries;
 
@@ -30,7 +31,7 @@ const SESSION_COOKIE_NAME: &str = "session";
 
 #[allow(clippy::unwrap_used)]
 pub static TEMPLATES: LazyLock<RwLock<Tera>> = LazyLock::new(|| {
-    let mut tera = Tera::new("templates/**/*.j2").unwrap();
+    let mut tera = Tera::new("templates/**/*.{j2,js}").unwrap();
 
     setup_tera(&mut tera);
 
@@ -86,8 +87,6 @@ pub fn setup_tera(mut tera: impl std::ops::DerefMut<Target = Tera>) {
             .replace("<body", "<body data-on-load=\"@get('/.watch')\""),
         )
         .unwrap();
-        tera.add_template_file("events/hot_reload.js", Some("hot_reload.js"))
-            .unwrap();
     }
 }
 

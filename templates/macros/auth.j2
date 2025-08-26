@@ -4,6 +4,11 @@
 {% else %}
 {% set other = "login" %}
 {% endif %}
+{% if redirect_to %}
+{% set redirect_to_query = "?redirect_to=" ~ redirect_to %}
+{% else %}
+{% set redirect_to_query = "" %}
+{% endif %}
 
 <ul data-ref="errors">
     {% for error in errors %}
@@ -17,6 +22,6 @@
     <input type="password" name="password" required>
     <button type="submit">Auth</button>
 </form>
-<a href="/{{ other }}">{{ t(locale=locale, key=other) }}</a>
+<a href="/{{ other }}{{ redirect_to_query }}">{{ t(locale=locale, key=other) }}</a>
 <a href="/">{{ t(locale=locale, key="home") }}</a>
 {% endmacro %}
