@@ -12,7 +12,7 @@ pub mod credentials {
     use crate::repo::auth::Credentials;
 
     pub fn valid() -> Credentials {
-        Credentials::with_username_password("username".into(), "password".into())
+        Credentials::with_username_password("username".into(), "ABcd123+".into())
     }
 
     pub fn invalid() -> Credentials {
