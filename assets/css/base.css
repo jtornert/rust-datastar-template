@@ -1,13 +1,19 @@
 @import url("color-scheme-light.css") layer(theme) (scripting: none) and (prefers-color-scheme: light),
-(scripting: enabled);
+    (scripting: enabled);
 @import url("color-scheme-dark.css") layer(theme) (scripting: none) and (prefers-color-scheme: dark),
-(scripting: enabled);
+    (scripting: enabled);
 
-@layer base, theme;
+@layer base, theme, utility;
 
 @layer base {
     html {
         font-family: sans-serif;
         line-height: 1.5;
+    }
+}
+
+@layer utility {
+    [data-cloak] {
+        display: none;
     }
 }
