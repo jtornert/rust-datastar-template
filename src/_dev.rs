@@ -8,6 +8,7 @@ use crate::web::{TEMPLATES, setup_tera};
 pub async fn watcher() -> impl IntoResponse {
     use async_stream::stream;
     use notify::{RecursiveMode, Watcher, event};
+    use tera::Context;
     use tokio::sync::mpsc;
 
     Sse::new(stream! {
@@ -44,27 +45,25 @@ pub async fn watcher() -> impl IntoResponse {
                         setup_tera(TEMPLATES.write().await);
 
                         yield Ok::<_, Infallible>(ExecuteScript::new(
-                            std::fs::read_to_string(
-                                std::path::Path::new("templates").join("events")
-                                    .join("reload.js")
-                                )
-                                .unwrap(),
+                            TEMPLATES
+                            .read()
+                            .await
+                            .render("events/reload.js", &Context::new())
+                            .unwrap()
                         )
                         .write_as_axum_sse_event());
                     }
                     "js" => {
                         yield Ok::<_, Infallible>(ExecuteScript::new(
-                            std::fs::read_to_string(
-                                std::path::Path::new("templates").join("events")
-                                    .join("reload.js")
-                            )
-                                .unwrap(),
+                            TEMPLATES
+                            .read()
+                            .await
+                            .render("events/reload.js", &Context::new())
+                            .unwrap()
                         )
                         .write_as_axum_sse_event());
                     }
                     _ => {
-                        use tera::Context;
-
                         let mut context = Context::new();
 
                         context.insert(
@@ -75,7 +74,7 @@ pub async fn watcher() -> impl IntoResponse {
                         yield Ok::<_, Infallible>(ExecuteScript::new(TEMPLATES
                             .read()
                             .await
-                            .render("hot_reload.js", &context)
+                            .render("events/hot_reload.js", &context)
                             .unwrap()).write_as_axum_sse_event());
                     }
                 }
