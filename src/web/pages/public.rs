@@ -72,7 +72,7 @@ pub mod signup {
     #[derive(Serialize, TeraTemplate)]
     #[template(path = "pages/signup.j2")]
     struct Page {
-        errors: Vec<String>,
+        errors: Vec<&'static str>,
         auth_type: AuthType,
         username: String,
         redirect_to: Option<String>,
@@ -99,7 +99,7 @@ pub mod signup {
         match repo::auth::signup(&db, body).await {
             Err(repo::Error::UsernameTaken(username)) => Err(Html(
                 Page {
-                    errors: vec!["username_already_taken".into()],
+                    errors: vec!["username_already_taken"],
                     auth_type: AuthType::SignUp,
                     username: username.trim_matches('\'').into(),
                     redirect_to: query.redirect_to,
@@ -108,9 +108,9 @@ pub mod signup {
             )
             .into_response()),
 
-            Err(repo::Error::InvalidUsername(username)) => Err(Html(
+            Err(repo::Error::InvalidCredentials(username, errors)) => Err(Html(
                 Page {
-                    errors: vec!["username_invalid".into()],
+                    errors,
                     auth_type: AuthType::SignUp,
                     username: username.trim_matches('\'').into(),
                     redirect_to: query.redirect_to,
@@ -121,7 +121,7 @@ pub mod signup {
 
             Err(_) => Err(Html(
                 Page {
-                    errors: vec!["something_went_wrong".into()],
+                    errors: vec!["something_went_wrong"],
                     auth_type: AuthType::SignUp,
                     username: String::new(),
                     redirect_to: query.redirect_to,
@@ -269,7 +269,7 @@ pub mod login {
     #[derive(Serialize, TeraTemplate)]
     #[template(path = "pages/login.j2")]
     struct Page {
-        errors: Vec<String>,
+        errors: Vec<&'static str>,
         auth_type: AuthType,
         username: String,
         redirect_to: Option<String>,
@@ -294,12 +294,12 @@ pub mod login {
         Form(body): Form<Credentials>,
     ) -> Result<impl IntoResponse, Response> {
         let token = match repo::auth::login(&db, body).await {
-            Err(repo::error::Error::CredentialsInvalid(username)) => {
+            Err(repo::error::Error::CredentialsInvalid) => {
                 return Err(Html(
                     Page {
-                        errors: vec!["credentials_invalid".into()],
+                        errors: vec!["credentials_invalid"],
                         auth_type: AuthType::LogIn,
-                        username,
+                        username: String::new(),
                         redirect_to: query.redirect_to,
                     }
                     .render(TEMPLATES.read().await, "en-GB"),
@@ -310,7 +310,7 @@ pub mod login {
                 tracing::error!(?e);
                 return Err(Html(
                     Page {
-                        errors: vec!["something_went_wrong".into()],
+                        errors: vec!["something_went_wrong"],
                         auth_type: AuthType::LogIn,
                         username: String::new(),
                         redirect_to: query.redirect_to,
