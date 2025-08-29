@@ -19,7 +19,8 @@ use bb8::Pool;
 use bb8_surrealdb_any::ConnectionManager;
 use tera::{Context, Tera};
 use tokio::{net::TcpListener, sync::RwLock};
-use tower_http::services::ServeDir;
+use tower::ServiceBuilder;
+use tower_http::{compression::CompressionLayer, services::ServeDir};
 
 use crate::{
     CONFIG,
@@ -84,7 +85,10 @@ pub fn setup_tera(mut tera: impl std::ops::DerefMut<Target = Tera>) {
                     .join("base.j2"),
             )
             .unwrap()
-            .replace("<body", "<body data-on-load=\"@get('/.watch')\""),
+            .replace(
+                "<body",
+                "<body data-on-load=\"@get('/.watch', {retryScaler: 1, retryMaxCount: 30})\"",
+            ),
         )
         .unwrap();
     }
@@ -184,7 +188,11 @@ pub fn create_router(pool: Pool<ConnectionManager<String>>) -> Router {
         )
         .nest_service("/assets", ServeDir::new("assets"))
         .fallback(pages::not_found)
-        .layer(middleware::from_fn(normalize_trailing_slash))
+        .layer(
+            ServiceBuilder::new()
+                .layer(middleware::from_fn(normalize_trailing_slash))
+                .layer(CompressionLayer::new().br(true)),
+        )
         .with_state(state);
 
     #[cfg(debug_assertions)]
