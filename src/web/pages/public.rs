@@ -144,8 +144,8 @@ pub mod signup {
 
                 if headers
                     .get("datastar-request")
-                    .and_then(|h| h.to_str().map(|v| v == "true").ok())
-                    .unwrap_or(false)
+                    .and_then(|h| h.to_str().ok())
+                    .is_some_and(|v| v == "true")
                 {
                     let mut response_headers = HeaderMap::new();
 
@@ -252,6 +252,7 @@ pub mod login {
     use axum::{
         Extension,
         extract::Query,
+        http::{HeaderMap, HeaderValue, header::CONTENT_TYPE},
         response::{Html, IntoResponse, Redirect, Response},
     };
     use axum_extra::extract::{
@@ -263,7 +264,10 @@ pub mod login {
 
     use crate::{
         repo::{self, Db, auth::Credentials},
-        web::{SESSION_COOKIE_NAME, TEMPLATES, pages::public::AuthType, queries::RedirectToQuery},
+        web::{
+            SESSION_COOKIE_NAME, TEMPLATES, events, pages::public::AuthType,
+            queries::RedirectToQuery,
+        },
     };
 
     #[derive(Serialize, TeraTemplate)]
@@ -289,6 +293,7 @@ pub mod login {
 
     pub async fn post(
         secrets: PrivateCookieJar,
+        headers: HeaderMap,
         Query(query): Query<RedirectToQuery>,
         Extension(db): Extension<Arc<Db<'_>>>,
         Form(body): Form<Credentials>,
@@ -322,6 +327,14 @@ pub mod login {
             Ok(token) => token,
         };
 
+        let redirect_to = format!(
+            "/{}",
+            query
+                .redirect_to
+                .as_ref()
+                .map_or("", |uri| uri.trim_start_matches('/'))
+        );
+
         Ok((
             secrets.add(
                 Cookie::build((SESSION_COOKIE_NAME, token))
@@ -329,13 +342,23 @@ pub mod login {
                     .secure(true)
                     .same_site(SameSite::Strict),
             ),
-            Redirect::to(&format!(
-                "/{}",
-                query
-                    .redirect_to
-                    .as_ref()
-                    .map_or("", |uri| uri.trim_start_matches('/'))
-            )),
+            if headers
+                .get("datastar-request")
+                .and_then(|h| h.to_str().ok())
+                .is_some_and(|v| v == "true")
+            {
+                let mut response_headers = HeaderMap::new();
+
+                response_headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/javascript"));
+
+                (
+                    response_headers,
+                    events::Redirect { href: redirect_to }.render(TEMPLATES.read().await, "en-GB"),
+                )
+                    .into_response()
+            } else {
+                Redirect::to(&redirect_to).into_response()
+            },
         ))
     }
 
