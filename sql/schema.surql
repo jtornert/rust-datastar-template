@@ -6,7 +6,7 @@ DEFINE ACCESS OVERWRITE users ON DATABASE TYPE RECORD
 
 DEFINE TABLE OVERWRITE user SCHEMAFULL PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE name ON user TYPE string ASSERT 2 <= string::len($value) AND string::len($value) <= 32;
-DEFINE FIELD OVERWRITE _password ON user TYPE string ASSERT $value != NONE PERMISSIONS NONE;
+DEFINE FIELD OVERWRITE _password ON user TYPE string ASSERT string::len($value) == 97 AND string::starts_with($value, "$argon2id") PERMISSIONS NONE;
 DEFINE FIELD OVERWRITE registered_at ON user TYPE datetime DEFAULT time::now();
 DEFINE INDEX OVERWRITE user_name ON user FIELDS name UNIQUE;
 
