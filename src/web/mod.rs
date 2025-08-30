@@ -51,22 +51,29 @@ impl FromRef<AppState> for Key {
     }
 }
 
-#[allow(clippy::unwrap_used)]
 fn t(args: &HashMap<String, tera::Value>) -> core::result::Result<tera::Value, tera::Error> {
-    let locale = args.get("locale").unwrap();
-    let key = args.get("key").unwrap();
-    let path = std::path::Path::new(&std::env::var("PWD").unwrap())
+    let locale = args.get("locale").ok_or("locale not found in args")?;
+    let key = args.get("key").ok_or("key not found in args")?;
+    let path = std::path::Path::new(&std::env::var("PWD").map_err(|e| e.to_string())?)
         .join("locales")
-        .join(locale.as_str().unwrap())
-        .join(format!("{}.j2", key.as_str().unwrap()));
+        .join(
+            locale
+                .as_str()
+                .ok_or_else(|| format!("{locale} not valid UTF-8"))?,
+        )
+        .join(format!(
+            "{}.j2",
+            key.as_str()
+                .ok_or_else(|| format!("{key} not valid UTF-8"))?
+        ));
 
     if !path.exists() {
         return Err(format!("{} does not exist", path.to_string_lossy()).into());
     }
 
-    let template = std::fs::read_to_string(path).unwrap();
+    let template = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let template = ammonia::clean(&template);
-    let text = Tera::one_off(&template, &Context::from_serialize(args).unwrap(), true).unwrap();
+    let text = Tera::one_off(&template, &Context::from_serialize(args)?, true)?;
 
     Ok(text.into())
 }
@@ -105,8 +112,8 @@ async fn db_extension(State(state): State<AppState>, mut request: Request, next:
     };
 
     if let Err(e) = db
-        .use_ns(std::env::var("DB_NAMESPACE").unwrap_or_else(|_| "test".into()))
-        .use_db(std::env::var("DB_DATABASE").unwrap_or_else(|_| "test".into()))
+        .use_ns(&CONFIG.db_namespace)
+        .use_db(&CONFIG.db_database)
         .await
     {
         tracing::error!(?e);
