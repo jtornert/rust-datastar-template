@@ -5,8 +5,8 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 
 use crate::CONFIG;
 
-type Error = Box<dyn std::error::Error>;
-pub type TestResult = core::result::Result<(), Error>;
+type TestError = Box<dyn std::error::Error>;
+pub type TestResult = core::result::Result<(), TestError>;
 
 pub mod credentials {
     use crate::repo::auth::Credentials;
@@ -36,7 +36,7 @@ pub fn setup_test() {
         .ok();
 }
 
-pub async fn create_test_pool() -> Result<bb8::Pool<ConnectionManager<String>>, Error> {
+pub async fn create_test_pool() -> Result<bb8::Pool<ConnectionManager<String>>, TestError> {
     let pool = bb8::Pool::builder()
         .min_idle(1)
         .max_size(1)
