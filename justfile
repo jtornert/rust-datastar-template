@@ -14,7 +14,7 @@ build:
     cargo build --release
 
 run: build
-    ./target/release/rust-datastar-template
+    ./target/release/web-server
 
 example name:
     cargo watch -cq -w examples -x "run --example {{ name }}"

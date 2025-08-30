@@ -3,6 +3,10 @@ name = "rust-datastar-template"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "web-server"
+path = "src/main.rs"
+
 [lib]
 name = "server"
 
