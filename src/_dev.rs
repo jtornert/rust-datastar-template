@@ -43,7 +43,6 @@ pub async fn watcher() -> impl IntoResponse {
                     let mut context = Context::new();
 
                     context.insert("href", path);
-
                     emitter
                         .emit(Ok::<_, Infallible>(
                             ExecuteScript::new(
@@ -59,7 +58,6 @@ pub async fn watcher() -> impl IntoResponse {
                 } else {
                     TEMPLATES.write().await.full_reload().unwrap();
                     setup_tera(TEMPLATES.write().await);
-
                     emitter
                         .emit(Ok::<_, Infallible>(
                             ExecuteScript::new(
