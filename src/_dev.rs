@@ -35,47 +35,54 @@ pub async fn watcher() -> impl IntoResponse {
             if let EventKind::Modify(event::ModifyKind::Data(_)) = event.kind {
                 let path = &event.paths[0];
                 let ext = path.extension().and_then(|p| p.to_str()).unwrap();
-                let path = path.to_str()
-                .map(|p| p.trim_start_matches(&std::env::var("PWD").unwrap()))
-                .unwrap();
+                let path = path
+                    .to_str()
+                    .map(|p| p.trim_start_matches(&std::env::var("PWD").unwrap()))
+                    .unwrap();
 
                 match ext {
                     "j2" => {
                         TEMPLATES.write().await.full_reload().unwrap();
                         setup_tera(TEMPLATES.write().await);
 
-                        yield Ok::<_, Infallible>(ExecuteScript::new(
-                            TEMPLATES
-                            .read()
-                            .await
-                            .render("events/reload.js", &Context::new())
-                            .unwrap()
-                        )
-                        .write_as_axum_sse_event());
+                        yield Ok::<_, Infallible>(
+                            ExecuteScript::new(
+                                TEMPLATES
+                                    .read()
+                                    .await
+                                    .render("events/reload.js", &Context::new())
+                                    .unwrap(),
+                            )
+                            .write_as_axum_sse_event(),
+                        );
                     }
                     "js" => {
-                        yield Ok::<_, Infallible>(ExecuteScript::new(
-                            TEMPLATES
-                            .read()
-                            .await
-                            .render("events/reload.js", &Context::new())
-                            .unwrap()
-                        )
-                        .write_as_axum_sse_event());
+                        yield Ok::<_, Infallible>(
+                            ExecuteScript::new(
+                                TEMPLATES
+                                    .read()
+                                    .await
+                                    .render("events/reload.js", &Context::new())
+                                    .unwrap(),
+                            )
+                            .write_as_axum_sse_event(),
+                        );
                     }
                     _ => {
                         let mut context = Context::new();
 
-                        context.insert(
-                            "href",
-                            path,
-                        );
+                        context.insert("href", path);
 
-                        yield Ok::<_, Infallible>(ExecuteScript::new(TEMPLATES
-                            .read()
-                            .await
-                            .render("events/hot_reload.js", &context)
-                            .unwrap()).write_as_axum_sse_event());
+                        yield Ok::<_, Infallible>(
+                            ExecuteScript::new(
+                                TEMPLATES
+                                    .read()
+                                    .await
+                                    .render("events/hot_reload.js", &context)
+                                    .unwrap(),
+                            )
+                            .write_as_axum_sse_event(),
+                        );
                     }
                 }
             }
@@ -83,15 +90,16 @@ pub async fn watcher() -> impl IntoResponse {
     })
 }
 
-pub async fn no_cache(mut r: Response) -> Response {
+pub async fn no_cache(mut response: Response) -> Response {
     use axum::http::{
         HeaderValue,
         header::{CACHE_CONTROL, LAST_MODIFIED},
     };
 
-    r.headers_mut().remove(LAST_MODIFIED);
-    r.headers_mut()
+    response.headers_mut().remove(LAST_MODIFIED);
+    response
+        .headers_mut()
         .insert(CACHE_CONTROL, HeaderValue::from_static("no-cache"));
 
-    r
+    response
 }
