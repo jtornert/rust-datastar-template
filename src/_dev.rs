@@ -40,50 +40,35 @@ pub async fn watcher() -> impl IntoResponse {
                     .map(|p| p.trim_start_matches(&std::env::var("PWD").unwrap()))
                     .unwrap();
 
-                match ext {
-                    "j2" => {
-                        TEMPLATES.write().await.full_reload().unwrap();
-                        setup_tera(TEMPLATES.write().await);
+                if ext == "css" {
+                    let mut context = Context::new();
 
-                        yield Ok::<_, Infallible>(
-                            ExecuteScript::new(
-                                TEMPLATES
-                                    .read()
-                                    .await
-                                    .render("events/reload.js", &Context::new())
-                                    .unwrap(),
-                            )
-                            .write_as_axum_sse_event(),
-                        );
-                    }
-                    "js" => {
-                        yield Ok::<_, Infallible>(
-                            ExecuteScript::new(
-                                TEMPLATES
-                                    .read()
-                                    .await
-                                    .render("events/reload.js", &Context::new())
-                                    .unwrap(),
-                            )
-                            .write_as_axum_sse_event(),
-                        );
-                    }
-                    _ => {
-                        let mut context = Context::new();
+                    context.insert("href", path);
 
-                        context.insert("href", path);
+                    yield Ok::<_, Infallible>(
+                        ExecuteScript::new(
+                            TEMPLATES
+                                .read()
+                                .await
+                                .render("events/hot_reload.js", &context)
+                                .unwrap(),
+                        )
+                        .write_as_axum_sse_event(),
+                    );
+                } else {
+                    TEMPLATES.write().await.full_reload().unwrap();
+                    setup_tera(TEMPLATES.write().await);
 
-                        yield Ok::<_, Infallible>(
-                            ExecuteScript::new(
-                                TEMPLATES
-                                    .read()
-                                    .await
-                                    .render("events/hot_reload.js", &context)
-                                    .unwrap(),
-                            )
-                            .write_as_axum_sse_event(),
-                        );
-                    }
+                    yield Ok::<_, Infallible>(
+                        ExecuteScript::new(
+                            TEMPLATES
+                                .read()
+                                .await
+                                .render("events/reload.js", &Context::new())
+                                .unwrap(),
+                        )
+                        .write_as_axum_sse_event(),
+                    );
                 }
             }
         }
