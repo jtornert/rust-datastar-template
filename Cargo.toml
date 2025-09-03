@@ -12,7 +12,7 @@ name = "server"
 
 [dependencies]
 ammonia = "4.1.1"
-async-stream = "0.3.6"
+async-fn-stream = "0.2.2"
 axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["cookie-private", "form"] }
 base64 = "0.22.1"

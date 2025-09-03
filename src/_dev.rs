@@ -1,17 +1,16 @@
 use std::convert::Infallible;
 
+use async_fn_stream::fn_stream;
 use axum::response::{IntoResponse, Response, Sse};
+use notify::{RecursiveMode, Watcher, event};
+use tera::Context;
+use tokio::sync::mpsc;
 
 use crate::web::{TEMPLATES, setup_tera};
 
 #[allow(clippy::unwrap_used)]
 pub async fn watcher() -> impl IntoResponse {
-    use async_stream::stream;
-    use notify::{RecursiveMode, Watcher, event};
-    use tera::Context;
-    use tokio::sync::mpsc;
-
-    Sse::new(stream! {
+    Sse::new(fn_stream(|emitter| async move {
         let (tx, mut rx) = mpsc::unbounded_channel();
         let mut watcher = notify::recommended_watcher(move |e| {
             tx.send(e).unwrap();
@@ -45,34 +44,38 @@ pub async fn watcher() -> impl IntoResponse {
 
                     context.insert("href", path);
 
-                    yield Ok::<_, Infallible>(
-                        ExecuteScript::new(
-                            TEMPLATES
-                                .read()
-                                .await
-                                .render("events/hot_reload.js", &context)
-                                .unwrap(),
-                        )
-                        .write_as_axum_sse_event(),
-                    );
+                    emitter
+                        .emit(Ok::<_, Infallible>(
+                            ExecuteScript::new(
+                                TEMPLATES
+                                    .read()
+                                    .await
+                                    .render("events/hot_reload.js", &context)
+                                    .unwrap(),
+                            )
+                            .write_as_axum_sse_event(),
+                        ))
+                        .await;
                 } else {
                     TEMPLATES.write().await.full_reload().unwrap();
                     setup_tera(TEMPLATES.write().await);
 
-                    yield Ok::<_, Infallible>(
-                        ExecuteScript::new(
-                            TEMPLATES
-                                .read()
-                                .await
-                                .render("events/reload.js", &Context::new())
-                                .unwrap(),
-                        )
-                        .write_as_axum_sse_event(),
-                    );
+                    emitter
+                        .emit(Ok::<_, Infallible>(
+                            ExecuteScript::new(
+                                TEMPLATES
+                                    .read()
+                                    .await
+                                    .render("events/reload.js", &Context::new())
+                                    .unwrap(),
+                            )
+                            .write_as_axum_sse_event(),
+                        ))
+                        .await;
                 }
             }
         }
-    })
+    }))
 }
 
 pub async fn no_cache(mut response: Response) -> Response {
