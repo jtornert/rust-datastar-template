@@ -1,7 +1,15 @@
 use std::convert::Infallible;
 
 use async_fn_stream::fn_stream;
-use axum::response::{IntoResponse, Response, Sse};
+use axum::{
+    http::{
+        HeaderValue,
+        header::{CACHE_CONTROL, LAST_MODIFIED},
+    },
+    response::{IntoResponse, Response, Sse},
+};
+use datastar::prelude::ExecuteScript;
+use notify::EventKind;
 use notify::{RecursiveMode, Watcher, event};
 use tera::Context;
 use tokio::sync::mpsc;
@@ -28,9 +36,6 @@ pub async fn watcher() -> impl IntoResponse {
             .unwrap();
 
         while let Some(Ok(event)) = rx.recv().await {
-            use datastar::prelude::ExecuteScript;
-            use notify::EventKind;
-
             if let EventKind::Modify(event::ModifyKind::Data(_)) = event.kind {
                 let path = &event.paths[0];
                 let ext = path.extension().and_then(|p| p.to_str()).unwrap();
@@ -77,11 +82,6 @@ pub async fn watcher() -> impl IntoResponse {
 }
 
 pub async fn no_cache(mut response: Response) -> Response {
-    use axum::http::{
-        HeaderValue,
-        header::{CACHE_CONTROL, LAST_MODIFIED},
-    };
-
     response.headers_mut().remove(LAST_MODIFIED);
     response
         .headers_mut()
