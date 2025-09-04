@@ -1,16 +1,16 @@
 use std::convert::Infallible;
 
-use async_fn_stream::fn_stream;
+use async_fn_stream::{StreamEmitter, fn_stream};
 use axum::{
     http::{
         HeaderValue,
         header::{CACHE_CONTROL, LAST_MODIFIED},
     },
-    response::{IntoResponse, Response, Sse},
+    response::{IntoResponse, Response, Sse, sse::Event},
 };
 use datastar::prelude::ExecuteScript;
-use notify::EventKind;
-use notify::{RecursiveMode, Watcher, event};
+use notify::{EventKind, event::ModifyKind};
+use notify::{RecursiveMode, Watcher};
 use tera::Context;
 use tokio::sync::mpsc;
 
@@ -18,67 +18,65 @@ use crate::web::{TEMPLATES, setup_tera};
 
 #[allow(clippy::unwrap_used)]
 pub async fn watcher() -> impl IntoResponse {
-    Sse::new(fn_stream(|emitter| async move {
-        let (tx, mut rx) = mpsc::unbounded_channel();
-        let mut watcher = notify::recommended_watcher(move |e| {
-            tx.send(e).unwrap();
-        })
-        .unwrap();
-
-        watcher
-            .watch(std::path::Path::new("assets"), RecursiveMode::Recursive)
-            .unwrap();
-        watcher
-            .watch(std::path::Path::new("locales"), RecursiveMode::Recursive)
-            .unwrap();
-        watcher
-            .watch(std::path::Path::new("templates"), RecursiveMode::Recursive)
+    Sse::new(fn_stream(
+        |emitter: StreamEmitter<Result<Event, Infallible>>| async move {
+            let (tx, mut rx) = mpsc::unbounded_channel();
+            let mut watcher = notify::recommended_watcher(move |e| {
+                tx.send(e).unwrap();
+            })
             .unwrap();
 
-        while let Some(Ok(event)) = rx.recv().await {
-            if let EventKind::Modify(event::ModifyKind::Data(_)) = event.kind {
-                let path = &event.paths[0];
-                let ext = path.extension().and_then(|p| p.to_str()).unwrap();
-                let path = path
-                    .to_str()
-                    .map(|p| p.trim_start_matches(&std::env::var("PWD").unwrap()))
-                    .unwrap();
+            watcher
+                .watch(std::path::Path::new("assets"), RecursiveMode::Recursive)
+                .unwrap();
+            watcher
+                .watch(std::path::Path::new("locales"), RecursiveMode::Recursive)
+                .unwrap();
+            watcher
+                .watch(std::path::Path::new("templates"), RecursiveMode::Recursive)
+                .unwrap();
 
-                if ext == "css" {
-                    let mut context = Context::new();
+            while let Some(Ok(event)) = rx.recv().await {
+                if let EventKind::Modify(ModifyKind::Data(_)) = event.kind {
+                    let path = &event.paths[0];
+                    let ext = path.extension().and_then(|p| p.to_str()).unwrap();
+                    let path = path
+                        .to_str()
+                        .map(|p| p.trim_start_matches(&std::env::var("PWD").unwrap()))
+                        .unwrap();
 
-                    context.insert("href", path);
-                    emitter
-                        .emit(Ok::<_, Infallible>(
-                            ExecuteScript::new(
+                    if ext == "css" {
+                        let mut context = Context::new();
+
+                        context.insert("href", path);
+                        emitter
+                            .emit(Ok(ExecuteScript::new(
                                 TEMPLATES
                                     .read()
                                     .await
                                     .render("events/hot_reload.js", &context)
                                     .unwrap(),
                             )
-                            .write_as_axum_sse_event(),
-                        ))
-                        .await;
-                } else {
-                    TEMPLATES.write().await.full_reload().unwrap();
-                    setup_tera(TEMPLATES.write().await);
-                    emitter
-                        .emit(Ok::<_, Infallible>(
-                            ExecuteScript::new(
+                            .write_as_axum_sse_event()))
+                            .await;
+                    } else {
+                        TEMPLATES.write().await.full_reload().unwrap();
+                        setup_tera(TEMPLATES.write().await);
+                        emitter
+                            .emit(Ok(ExecuteScript::new(
                                 TEMPLATES
                                     .read()
                                     .await
                                     .render("events/reload.js", &Context::new())
                                     .unwrap(),
                             )
-                            .write_as_axum_sse_event(),
-                        ))
-                        .await;
+                            .write_as_axum_sse_event()))
+                            .await;
+                    }
                 }
             }
-        }
-    }))
+        },
+    ))
 }
 
 pub async fn no_cache(mut response: Response) -> Response {
