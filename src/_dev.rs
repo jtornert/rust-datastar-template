@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use async_fn_stream::{StreamEmitter, fn_stream};
+use asynk_strim::Yielder;
 use axum::{
     http::{
         HeaderValue,
@@ -18,8 +18,8 @@ use crate::web::{TEMPLATES, setup_tera};
 
 #[allow(clippy::unwrap_used)]
 pub async fn watcher() -> impl IntoResponse {
-    Sse::new(fn_stream(
-        |emitter: StreamEmitter<Result<Event, Infallible>>| async move {
+    Sse::new(asynk_strim::stream_fn(
+        |mut yielder: Yielder<Result<Event, Infallible>>| async move {
             let (tx, mut rx) = mpsc::unbounded_channel();
             let mut watcher = notify::recommended_watcher(move |e| {
                 tx.send(e).unwrap();
@@ -49,8 +49,8 @@ pub async fn watcher() -> impl IntoResponse {
                         let mut context = Context::new();
 
                         context.insert("href", path);
-                        emitter
-                            .emit(Ok(ExecuteScript::new(
+                        yielder
+                            .yield_item(Ok(ExecuteScript::new(
                                 TEMPLATES
                                     .read()
                                     .await
@@ -62,8 +62,8 @@ pub async fn watcher() -> impl IntoResponse {
                     } else {
                         TEMPLATES.write().await.full_reload().unwrap();
                         setup_tera(TEMPLATES.write().await);
-                        emitter
-                            .emit(Ok(ExecuteScript::new(
+                        yielder
+                            .yield_item(Ok(ExecuteScript::new(
                                 TEMPLATES
                                     .read()
                                     .await

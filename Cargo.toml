@@ -13,6 +13,7 @@ name = "server"
 [dependencies]
 ammonia = "4.1.1"
 async-fn-stream = "0.2.2"
+asynk-strim = "0.1.2"
 axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["cookie-private", "form"] }
 base64 = "0.22.1"
@@ -33,6 +34,7 @@ tower = "0.5.2"
 tower-http = { version = "0.6.6", features = ["compression-br", "fs"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.18.1", features = ["v4"] }
 
 [dev-dependencies]
 mime = "0.3.17"

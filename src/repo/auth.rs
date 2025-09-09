@@ -1,4 +1,5 @@
 use surrealdb::opt::auth::Record;
+use uuid::Uuid;
 
 use crate::{
     CONFIG,
@@ -104,8 +105,9 @@ pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
 
     #[cfg(any(debug_assertions, test))]
     db.invalidate().await.map_err(|e| {
-        tracing::error!(?e);
-        Error::Surreal
+        let uuid = Uuid::new_v4();
+        crate::log_line!(uuid, e);
+        Error::ServiceUnavailable(uuid)
     })?;
     #[cfg(not(debug_assertions))]
     {
@@ -118,15 +120,17 @@ pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
         })
         .await
         .map_err(|e| {
-            tracing::error!(?e);
-            Error::Surreal
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            Error::ServiceUnavailable(uuid)
         })?;
         db.use_ns(&CONFIG.db_namespace)
             .use_db(&CONFIG.db_database)
             .await
             .map_err(|e| {
-                tracing::error!(?e);
-                Error::Surreal
+                let uuid = Uuid::new_v4();
+                crate::log_line!(uuid, e);
+                Error::ServiceUnavailable(uuid)
             })?;
     }
     match db
@@ -135,8 +139,9 @@ pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
         .bind(("password", credentials.password))
         .await
         .map_err(|e| {
-            tracing::error!(?e);
-            Error::Surreal
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            Error::ServiceUnavailable(uuid)
         })?
         .check()
     {
@@ -146,8 +151,9 @@ pub async fn signup(db: &Db<'_>, credentials: Credentials) -> Result<()> {
             Err(Error::UsernameTaken(value))
         }
         Err(e) => {
-            tracing::error!(?e);
-            Err(Error::Surreal)
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            Err(Error::ServiceUnavailable(uuid))
         }
         Ok(_) => Ok(()),
     }
@@ -165,8 +171,9 @@ pub async fn login(db: &Db<'_>, credentials: Credentials) -> Result<String> {
         if matches!(e, surrealdb::Error::Db(surrealdb::error::Db::NoRecordFound)) {
             Error::CredentialsInvalid
         } else {
-            tracing::error!(?e);
-            Error::Surreal
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            Error::ServiceUnavailable(uuid)
         }
     })?;
 
@@ -174,15 +181,19 @@ pub async fn login(db: &Db<'_>, credentials: Credentials) -> Result<String> {
         .query("fn::auth::create_session($auth)")
         .await
         .map_err(|e| {
-            tracing::error!(?e);
-            Error::Surreal
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            Error::ServiceUnavailable(uuid)
         })?;
     let token: Option<String> = response.take("token").map_err(|e| {
-        tracing::error!(?e);
-        Error::Surreal
+        let uuid = Uuid::new_v4();
+        crate::log_line!(uuid, e);
+        Error::ServiceUnavailable(uuid)
     })?;
 
-    token.ok_or(Error::Surreal)
+    tracing::debug!(?token);
+
+    token.ok_or(Error::CredentialsInvalid)
 }
 
 pub async fn authenticate(db: &Db<'_>, token: &str) -> Result<()> {
@@ -194,9 +205,17 @@ pub async fn authenticate(db: &Db<'_>, token: &str) -> Result<()> {
     })
     .await
     .map_err(|e| {
-        tracing::error!(?e);
-        Error::CredentialsInvalid
+        if matches!(e, surrealdb::Error::Db(surrealdb::error::Db::NoRecordFound)) {
+            tracing::error!(?e);
+            Error::CredentialsInvalid
+        } else {
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            Error::ServiceUnavailable(uuid)
+        }
     })?;
+
+    tracing::debug!("logged in");
 
     Ok(())
 }

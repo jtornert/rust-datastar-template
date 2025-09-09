@@ -12,7 +12,7 @@ DEFINE INDEX OVERWRITE user_name ON user FIELDS name UNIQUE;
 
 DEFINE TABLE OVERWRITE session SCHEMAFULL PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE token ON session TYPE string;
-DEFINE FIELD OVERWRITE nbf ON session TYPE datetime DEFAULT time::now();
-DEFINE FIELD OVERWRITE ttl ON session TYPE datetime DEFAULT time::now() + 1h;
+DEFINE FIELD OVERWRITE nbf ON session TYPE datetime VALUE time::now();
+DEFINE FIELD OVERWRITE ttl ON session TYPE datetime;
 DEFINE FIELD OVERWRITE user ON session TYPE record<user>;
 DEFINE INDEX OVERWRITE session_user ON session FIELDS user UNIQUE;

@@ -1,4 +1,5 @@
 mod events;
+mod guards;
 mod pages;
 mod queries;
 
@@ -21,6 +22,7 @@ use tera::{Context, Tera};
 use tokio::{net::TcpListener, sync::RwLock};
 use tower::ServiceBuilder;
 use tower_http::{compression::CompressionLayer, services::ServeDir};
+use uuid::Uuid;
 
 use crate::{
     CONFIG,
@@ -33,6 +35,10 @@ const SESSION_COOKIE_NAME: &str = "session";
 #[allow(clippy::unwrap_used)]
 pub static TEMPLATES: LazyLock<RwLock<Tera>> = LazyLock::new(|| {
     let mut tera = Tera::new("templates/**/*.{j2,js}").unwrap();
+
+    #[cfg(debug_assertions)]
+    tera.extend(&Tera::new("templates_dev/**/*.{j2,js}").unwrap())
+        .unwrap();
 
     setup_tera(&mut tera);
 
@@ -104,8 +110,9 @@ pub fn setup_tera(mut tera: impl std::ops::DerefMut<Target = Tera>) {
 async fn db_extension(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
     let db = match state.pool.get_owned().await {
         Err(e) => {
-            tracing::error!(?e);
-            return Html(ServiceUnavailable {}.render(TEMPLATES.read().await, "en-GB"))
+            let uuid = Uuid::new_v4();
+            crate::log_line!(uuid, e);
+            return Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
                 .into_response();
         }
         Ok(db) => db,
@@ -116,8 +123,10 @@ async fn db_extension(State(state): State<AppState>, mut request: Request, next:
         .use_db(&CONFIG.db_database)
         .await
     {
-        tracing::error!(?e);
-        return Html(ServiceUnavailable {}.render(TEMPLATES.read().await, "en-GB")).into_response();
+        let uuid = Uuid::new_v4();
+        crate::log_line!(uuid, e);
+        return Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
+            .into_response();
     }
 
     let db = Arc::new(db);
@@ -141,13 +150,26 @@ async fn authenticator(
         .into_response();
     };
 
+    tracing::debug!("token: {}", cookie.value());
+
     if let Err(e) = repo::auth::authenticate(&db, cookie.value()).await {
-        tracing::error!(?e);
-        return Redirect::to(&format!(
-            "/login?redirect_to=/{}",
-            request.uri().to_string().trim_start_matches('/')
-        ))
-        .into_response();
+        return match e {
+            repo::Error::CredentialsInvalid => Redirect::to(&format!(
+                "/login?redirect_to=/{}",
+                request.uri().to_string().trim_start_matches('/')
+            ))
+            .into_response(),
+            repo::Error::ServiceUnavailable(uuid) => {
+                Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
+                    .into_response()
+            }
+            _ => {
+                let uuid = Uuid::new_v4();
+                crate::log_line!(uuid);
+                Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
+                    .into_response()
+            }
+        };
     }
 
     next.run(request).await

@@ -1,17 +1,24 @@
 pub mod home {
-    use std::sync::Arc;
+    use std::{convert::Infallible, sync::Arc, time::Duration};
 
+    use asynk_strim::{Yielder, stream_fn};
     use axum::{
         Extension,
-        response::{Html, IntoResponse},
+        response::{Html, IntoResponse, Response, Sse, sse::Event},
     };
+    use datastar::{consts::ElementPatchMode, prelude::PatchElements};
     use serde::Serialize;
     use tera_template_macro::TeraTemplate;
+    use uuid::Uuid;
 
     use crate::{
         models::user::User,
         repo::{self, Db, DbRecord},
-        web::{TEMPLATES, pages::ServiceUnavailable},
+        web::{
+            TEMPLATES,
+            guards::DatastarRequest,
+            pages::{NotFound, ServiceUnavailable},
+        },
     };
 
     #[derive(Serialize, TeraTemplate)]
@@ -20,15 +27,50 @@ pub mod home {
         user: DbRecord<User>,
     }
 
-    pub async fn get(Extension(db): Extension<Arc<Db<'_>>>) -> impl IntoResponse {
-        let user = match repo::user::me(&db).await {
-            Err(_) => {
-                return Html(ServiceUnavailable {}.render(TEMPLATES.read().await, "en-GB"));
-            }
-            Ok(user) => user,
-        };
+    pub async fn get(
+        Extension(db): Extension<Arc<Db<'_>>>,
+        DatastarRequest(datastar_request): DatastarRequest,
+    ) -> Response {
+        if datastar_request {
+            Sse::new(stream_fn(
+                |mut yielder: Yielder<Result<Event, Infallible>>| async move {
+                    for _ in 0..3 {
+                        yielder
+                            .yield_item(Ok(PatchElements::new("<p>Hello</p>")
+                                .mode(ElementPatchMode::Append)
+                                .selector("#root")
+                                .write_as_axum_sse_event()))
+                            .await;
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                    }
+                },
+            ))
+            .into_response()
+        } else {
+            let user = match repo::user::me(&db).await {
+                Err(repo::Error::ServiceUnavailable(uuid)) => {
+                    return Html(
+                        ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"),
+                    )
+                    .into_response();
+                }
+                Err(repo::Error::NotFound) => {
+                    return Html(NotFound {}.render(TEMPLATES.read().await, "en-GB"))
+                        .into_response();
+                }
+                Err(_) => {
+                    let uuid = Uuid::new_v4();
+                    crate::log_line!(uuid);
+                    return Html(
+                        ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"),
+                    )
+                    .into_response();
+                }
+                Ok(user) => user,
+            };
 
-        Html(Page { user }.render(TEMPLATES.read().await, "en-GB"))
+            Html(Page { user }.render(TEMPLATES.read().await, "en-GB")).into_response()
+        }
     }
 
     #[cfg(test)]

@@ -8,14 +8,14 @@ DEFINE FUNCTION OVERWRITE fn::auth::login($username: option<string>, $password: 
     };
 
     IF $token_str != NONE {
-        RETURN SELECT user as id FROM ONLY session WHERE token = $token_str AND ttl > time::now() LIMIT 1;
+        RETURN SELECT user as id, ttl FROM ONLY session WHERE token = $token_str AND ttl > time::now() LIMIT 1;
     };
 } PERMISSIONS WHERE !type::is::record($auth, "user");
 
 DEFINE FUNCTION OVERWRITE fn::auth::create_session($user: record<user>) {
-    RETURN UPSERT ONLY session SET token = rand::uuid::v4(), user = $user WHERE user = $user;
+    RETURN UPSERT ONLY session SET token = rand::uuid::v4(), user = $user, ttl = time::now() + 1h WHERE user = $user;
 };
 
 DEFINE FUNCTION OVERWRITE fn::auth::invalidate_session($token_str: string) {
-    UPDATE ONLY session SET ttl = time::now() WHERE token = $token_str;
+    RETURN UPDATE ONLY session SET ttl = time::now() WHERE token = $token_str;
 };

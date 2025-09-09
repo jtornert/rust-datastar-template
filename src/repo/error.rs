@@ -1,12 +1,15 @@
 use std::fmt::Display;
 
+use uuid::Uuid;
+
 pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
-    Surreal,
+    ServiceUnavailable(Uuid),
     UsernameTaken(String),
     InvalidCredentials(String, Vec<&'static str>),
     CredentialsInvalid,
+    NotFound,
 }
 
 impl Display for Error {

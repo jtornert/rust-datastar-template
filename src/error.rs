@@ -33,3 +33,13 @@ impl IntoResponse for Error {
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }
+
+#[macro_export]
+macro_rules! log_line {
+    ($uuid: expr, $e: expr) => {
+        tracing::error!("{} | {} {:?}", $uuid, $e, $e);
+    };
+    ($uuid: expr) => {
+        tracing::error!("{} | Unhandled error", $uuid);
+    };
+}

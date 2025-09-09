@@ -7,6 +7,7 @@ use axum::{
 };
 use serde::Serialize;
 use tera_template_macro::TeraTemplate;
+use uuid::Uuid;
 
 use crate::web::TEMPLATES;
 
@@ -23,4 +24,6 @@ pub async fn not_found() -> impl IntoResponse {
 
 #[derive(Serialize, TeraTemplate)]
 #[template(path = "pages/service_unavailable.j2")]
-pub struct ServiceUnavailable {}
+pub struct ServiceUnavailable {
+    pub uuid: Uuid,
+}
