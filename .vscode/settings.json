@@ -1,5 +1,6 @@
 {
     "rust-analyzer.check.command": "clippy",
+    "workbench.editor.labelFormat": "short",
     "emmet.includeLanguages": {
         "jinja-html": "html"
     }
