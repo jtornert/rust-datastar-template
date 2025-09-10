@@ -5,14 +5,14 @@ pub mod index {
     use serde::Serialize;
     use tera_template_macro::TeraTemplate;
 
-    use crate::web::TEMPLATES;
+    use crate::web::{DEFAULT_LOCALE, TEMPLATES};
 
     #[derive(Serialize, TeraTemplate)]
     #[template(path = "pages/index.j2")]
     struct Page {}
 
     pub async fn get() -> impl IntoResponse {
-        Html(Page {}.render(TEMPLATES.read().await, "en-GB"))
+        Html(Page {}.render(TEMPLATES.read().await, DEFAULT_LOCALE))
     }
 
     #[cfg(test)]
@@ -66,7 +66,9 @@ pub mod signup {
 
     use crate::{
         repo::{self, Db, auth::Credentials},
-        web::{TEMPLATES, events, pages::public::AuthType, queries::RedirectToQuery},
+        web::{
+            DEFAULT_LOCALE, TEMPLATES, events, pages::public::AuthType, queries::RedirectToQuery,
+        },
     };
 
     #[derive(Serialize, TeraTemplate)]
@@ -86,7 +88,7 @@ pub mod signup {
                 username: String::new(),
                 redirect_to: query.redirect_to,
             }
-            .render(TEMPLATES.read().await, "en-GB"),
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE),
         )
     }
 
@@ -104,7 +106,7 @@ pub mod signup {
                     username: username.trim_matches('\'').into(),
                     redirect_to: query.redirect_to,
                 }
-                .render(TEMPLATES.read().await, "en-GB"),
+                .render(TEMPLATES.read().await, DEFAULT_LOCALE),
             )
             .into_response()),
 
@@ -115,7 +117,7 @@ pub mod signup {
                     username: username.trim_matches('\'').into(),
                     redirect_to: query.redirect_to,
                 }
-                .render(TEMPLATES.read().await, "en-GB"),
+                .render(TEMPLATES.read().await, DEFAULT_LOCALE),
             )
             .into_response()),
 
@@ -126,7 +128,7 @@ pub mod signup {
                     username: String::new(),
                     redirect_to: query.redirect_to,
                 }
-                .render(TEMPLATES.read().await, "en-GB"),
+                .render(TEMPLATES.read().await, DEFAULT_LOCALE),
             )
             .into_response()),
 
@@ -155,7 +157,7 @@ pub mod signup {
                     Ok((
                         response_headers,
                         events::Redirect { href: redirect_to }
-                            .render(TEMPLATES.read().await, "en-GB"),
+                            .render(TEMPLATES.read().await, DEFAULT_LOCALE),
                     )
                         .into_response())
                 } else {
@@ -265,7 +267,7 @@ pub mod login {
     use crate::{
         repo::{self, Db, auth::Credentials},
         web::{
-            SESSION_COOKIE_NAME, TEMPLATES, events, pages::public::AuthType,
+            DEFAULT_LOCALE, SESSION_COOKIE_NAME, TEMPLATES, events, pages::public::AuthType,
             queries::RedirectToQuery,
         },
     };
@@ -287,7 +289,7 @@ pub mod login {
                 username: String::new(),
                 redirect_to: query.redirect_to,
             }
-            .render(TEMPLATES.read().await, "en-GB"),
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE),
         )
     }
 
@@ -307,7 +309,7 @@ pub mod login {
                         username: String::new(),
                         redirect_to: query.redirect_to,
                     }
-                    .render(TEMPLATES.read().await, "en-GB"),
+                    .render(TEMPLATES.read().await, DEFAULT_LOCALE),
                 )
                 .into_response());
             }
@@ -320,7 +322,7 @@ pub mod login {
                         username: String::new(),
                         redirect_to: query.redirect_to,
                     }
-                    .render(TEMPLATES.read().await, "en-GB"),
+                    .render(TEMPLATES.read().await, DEFAULT_LOCALE),
                 )
                 .into_response());
             }
@@ -353,7 +355,8 @@ pub mod login {
 
                 (
                     response_headers,
-                    events::Redirect { href: redirect_to }.render(TEMPLATES.read().await, "en-GB"),
+                    events::Redirect { href: redirect_to }
+                        .render(TEMPLATES.read().await, DEFAULT_LOCALE),
                 )
                     .into_response()
             } else {

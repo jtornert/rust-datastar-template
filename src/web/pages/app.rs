@@ -15,7 +15,7 @@ pub mod home {
         models::user::User,
         repo::{self, Db, DbRecord},
         web::{
-            TEMPLATES,
+            DEFAULT_LOCALE, TEMPLATES,
             guards::DatastarRequest,
             pages::{NotFound, ServiceUnavailable},
         },
@@ -48,28 +48,28 @@ pub mod home {
             .into_response()
         } else {
             let user = match repo::user::me(&db).await {
+                Err(repo::Error::NotFound) => {
+                    return Html(NotFound {}.render(TEMPLATES.read().await, DEFAULT_LOCALE))
+                        .into_response();
+                }
                 Err(repo::Error::ServiceUnavailable(uuid)) => {
                     return Html(
-                        ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"),
+                        ServiceUnavailable { uuid }.render(TEMPLATES.read().await, DEFAULT_LOCALE),
                     )
                     .into_response();
-                }
-                Err(repo::Error::NotFound) => {
-                    return Html(NotFound {}.render(TEMPLATES.read().await, "en-GB"))
-                        .into_response();
                 }
                 Err(_) => {
                     let uuid = Uuid::new_v4();
                     crate::log_line!(uuid);
                     return Html(
-                        ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"),
+                        ServiceUnavailable { uuid }.render(TEMPLATES.read().await, DEFAULT_LOCALE),
                     )
                     .into_response();
                 }
                 Ok(user) => user,
             };
 
-            Html(Page { user }.render(TEMPLATES.read().await, "en-GB")).into_response()
+            Html(Page { user }.render(TEMPLATES.read().await, DEFAULT_LOCALE)).into_response()
         }
     }
 

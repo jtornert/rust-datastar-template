@@ -31,6 +31,7 @@ use crate::{
 };
 
 const SESSION_COOKIE_NAME: &str = "session";
+pub const DEFAULT_LOCALE: &str = "en-GB";
 
 #[allow(clippy::unwrap_used)]
 pub static TEMPLATES: LazyLock<RwLock<Tera>> = LazyLock::new(|| {
@@ -112,8 +113,10 @@ async fn db_extension(State(state): State<AppState>, mut request: Request, next:
         Err(e) => {
             let uuid = Uuid::new_v4();
             crate::log_line!(uuid, e);
-            return Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
-                .into_response();
+            return Html(
+                ServiceUnavailable { uuid }.render(TEMPLATES.read().await, DEFAULT_LOCALE),
+            )
+            .into_response();
         }
         Ok(db) => db,
     };
@@ -125,7 +128,7 @@ async fn db_extension(State(state): State<AppState>, mut request: Request, next:
     {
         let uuid = Uuid::new_v4();
         crate::log_line!(uuid, e);
-        return Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
+        return Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, DEFAULT_LOCALE))
             .into_response();
     }
 
@@ -150,8 +153,6 @@ async fn authenticator(
         .into_response();
     };
 
-    tracing::debug!("token: {}", cookie.value());
-
     if let Err(e) = repo::auth::authenticate(&db, cookie.value()).await {
         return match e {
             repo::Error::CredentialsInvalid => Redirect::to(&format!(
@@ -160,13 +161,13 @@ async fn authenticator(
             ))
             .into_response(),
             repo::Error::ServiceUnavailable(uuid) => {
-                Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
+                Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, DEFAULT_LOCALE))
                     .into_response()
             }
             _ => {
                 let uuid = Uuid::new_v4();
                 crate::log_line!(uuid);
-                Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, "en-GB"))
+                Html(ServiceUnavailable { uuid }.render(TEMPLATES.read().await, DEFAULT_LOCALE))
                     .into_response()
             }
         };

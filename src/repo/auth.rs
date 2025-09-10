@@ -191,8 +191,6 @@ pub async fn login(db: &Db<'_>, credentials: Credentials) -> Result<String> {
         Error::ServiceUnavailable(uuid)
     })?;
 
-    tracing::debug!(?token);
-
     token.ok_or(Error::CredentialsInvalid)
 }
 
@@ -214,8 +212,6 @@ pub async fn authenticate(db: &Db<'_>, token: &str) -> Result<()> {
             Error::ServiceUnavailable(uuid)
         }
     })?;
-
-    tracing::debug!("logged in");
 
     Ok(())
 }
