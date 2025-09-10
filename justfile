@@ -16,6 +16,9 @@ build:
 run: build
     ./target/release/web-server
 
+keygen:
+    cargo run --example keygen
+
 example name:
     cargo watch -cq -w examples -x "run --example {{ name }}"
 

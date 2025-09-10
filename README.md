@@ -9,7 +9,7 @@ just setup # installs SurrealDB, tiup, and cargo-watch
 Create `.env` from `.env.example` and run:
 
 ```bash
-just example keygen
+just keygen
 ```
 
 Copy the key into the `KEY` environment variable.
@@ -35,7 +35,7 @@ just dev # terminal 4
 Run tests:
 
 ```bash
-just test # all tests
+just test # run all tests
 just test <name> # run specific test matching <name>
 ```
 
@@ -45,7 +45,7 @@ Check for release:
 just check
 ```
 
-Build server:
+Build server for release:
 
 ```bash
 just build
