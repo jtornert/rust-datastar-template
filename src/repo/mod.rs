@@ -90,9 +90,9 @@ pub async fn create_pool() -> crate::Result<bb8::Pool<ConnectionManager<String>>
 #[derive(Serialize, Deserialize)]
 pub struct DbRecord<T> {
     #[serde(serialize_with = "serialize_record_id")]
-    id: RecordId,
+    pub id: RecordId,
     #[serde(flatten)]
-    data: T,
+    pub data: T,
 }
 
 fn serialize_record_id<S>(id: &RecordId, serializer: S) -> std::result::Result<S::Ok, S::Error>

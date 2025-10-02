@@ -196,25 +196,27 @@ pub fn create_router(pool: Pool<ConnectionManager<String>>) -> Router {
         key: Key::from(CONFIG.key.as_bytes()),
         pool: Arc::new(pool),
     };
+    let authenticator_middleware = middleware::from_fn_with_state(state.clone(), authenticator);
+    let db_extension_middleware = middleware::from_fn_with_state(state.clone(), db_extension);
     let router = Router::new()
         .route("/", routing::get(pages::public::index::get))
         .route(
             "/signup",
             routing::post(pages::public::signup::post)
-                .layer(middleware::from_fn_with_state(state.clone(), db_extension))
+                .layer(db_extension_middleware.clone())
                 .get(pages::public::signup::get),
         )
         .route(
             "/login",
             routing::post(pages::public::login::post)
-                .layer(middleware::from_fn_with_state(state.clone(), db_extension))
+                .layer(db_extension_middleware.clone())
                 .get(pages::public::login::get),
         )
         .merge(
             Router::new()
                 .route("/app", routing::get(pages::app::home::get))
-                .route_layer(middleware::from_fn_with_state(state.clone(), authenticator))
-                .route_layer(middleware::from_fn_with_state(state.clone(), db_extension)),
+                .route_layer(authenticator_middleware)
+                .route_layer(db_extension_middleware),
         )
         .nest_service("/assets", ServeDir::new("assets"))
         .fallback(pages::not_found)

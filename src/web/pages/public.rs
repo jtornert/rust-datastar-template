@@ -25,8 +25,17 @@ pub mod index {
 
         use crate::{
             _test::{TestResult, create_test_pool, setup_test},
-            web,
+            web::{self, DEFAULT_LOCALE, TEMPLATES, pages::public::index::Page},
         };
+
+        #[tokio::test]
+        async fn page() -> TestResult {
+            setup_test();
+
+            Page {}.render(TEMPLATES.read().await, DEFAULT_LOCALE);
+
+            Ok(())
+        }
 
         #[tokio::test]
         async fn get() -> TestResult {
@@ -177,8 +186,33 @@ pub mod signup {
 
         use crate::{
             _test::{TestResult, create_test_pool, credentials, setup_test},
-            web,
+            web::{
+                self, DEFAULT_LOCALE, TEMPLATES,
+                pages::public::{AuthType, signup::Page},
+            },
         };
+
+        #[tokio::test]
+        async fn page() -> TestResult {
+            setup_test();
+
+            Page {
+                auth_type: AuthType::SignUp,
+                errors: Vec::new(),
+                redirect_to: None,
+                username: "username".into(),
+            }
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE);
+            Page {
+                auth_type: AuthType::SignUp,
+                errors: vec!["username_already_taken"],
+                redirect_to: Some("/app".into()),
+                username: "username".into(),
+            }
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE);
+
+            Ok(())
+        }
 
         #[tokio::test]
         async fn get() -> TestResult {
@@ -375,8 +409,34 @@ pub mod login {
 
         use crate::{
             _test::{TestResult, create_test_pool, credentials, setup_test},
-            repo, web,
+            repo,
+            web::{
+                self, DEFAULT_LOCALE, TEMPLATES,
+                pages::public::{AuthType, login::Page},
+            },
         };
+
+        #[tokio::test]
+        async fn page() -> TestResult {
+            setup_test();
+
+            Page {
+                auth_type: AuthType::LogIn,
+                errors: Vec::new(),
+                redirect_to: None,
+                username: "username".into(),
+            }
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE);
+            Page {
+                auth_type: AuthType::LogIn,
+                errors: vec!["credentials_invalid"],
+                redirect_to: Some("/app".into()),
+                username: "username".into(),
+            }
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE);
+
+            Ok(())
+        }
 
         #[tokio::test]
         async fn get() -> TestResult {

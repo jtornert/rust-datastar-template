@@ -1,10 +1,5 @@
 use std::fmt::Display;
 
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
-
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
@@ -27,12 +22,6 @@ impl Display for Error {
 }
 
 impl std::error::Error for Error {}
-
-impl IntoResponse for Error {
-    fn into_response(self) -> Response {
-        StatusCode::INTERNAL_SERVER_ERROR.into_response()
-    }
-}
 
 #[macro_export]
 macro_rules! log_line {

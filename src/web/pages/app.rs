@@ -82,13 +82,32 @@ pub mod home {
                 header::{CONTENT_TYPE, COOKIE, SET_COOKIE},
             },
         };
+        use surrealdb::RecordId;
         use tower::Service;
 
         use crate::{
             _test::{TestResult, create_test_pool, credentials, setup_test},
-            repo,
-            web::create_router,
+            models::user::User,
+            repo::{self, DbRecord},
+            web::{DEFAULT_LOCALE, TEMPLATES, create_router, pages::app::home::Page},
         };
+
+        #[tokio::test]
+        async fn page() -> TestResult {
+            setup_test();
+
+            Page {
+                user: DbRecord {
+                    id: RecordId::from_table_key("user", 1),
+                    data: User {
+                        name: "username".into(),
+                    },
+                },
+            }
+            .render(TEMPLATES.read().await, DEFAULT_LOCALE);
+
+            Ok(())
+        }
 
         #[tokio::test]
         async fn without_token() -> TestResult {
