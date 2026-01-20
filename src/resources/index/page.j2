@@ -1,0 +1,27 @@
+{% extends "base.j2" %}
+
+{% block vars %}
+{% set title = "Datastar Template" %}
+{% endblock vars %}
+
+{% block head %}
+<title>{{ title }}</title>
+<link rel="stylesheet" href="/assets/pages/index/style.css">
+<script type="module" src="/assets/pages/index/script.js"></script>
+{% endblock head %}
+
+{% block body %}
+<main class="print-width" data-init="@get(location.query ?? location.pathname)">
+    <h1 class="font-large3">{{ title }}</h1>
+    <p>This site uses Datastar, click the button below to increase the counter.</p>
+    <button data-text="$counter || 0" data-on:click="$counter++">0</button>
+    <br><br>
+    <ui-global-element></ui-global-element>
+    <h2 class="font-large1">Messages powered by NATS</h2>
+    <form data-on:submit="@post(location.query ?? location.pathname)">
+        <input type="text" placeholder="Type message..." data-bind:text>
+        <button type="submit">Send</button>
+    </form>
+    <ul></ul>
+</main>
+{% endblock body %}

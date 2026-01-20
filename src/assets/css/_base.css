@@ -1,0 +1,6 @@
+@layer base {
+    html {
+        color-scheme: dark;
+        font-family: "Inter", sans-serif;
+    }
+}

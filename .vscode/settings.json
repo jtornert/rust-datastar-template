@@ -1,0 +1,6 @@
+{
+    "emmet.includeLanguages": {
+        "jinja-html": "html"
+    },
+    "workbench.editor.labelFormat": "short"
+}

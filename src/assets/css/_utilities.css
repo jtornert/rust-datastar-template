@@ -1,0 +1,83 @@
+@layer utilities {
+
+    html,
+    label,
+    button,
+    input,
+    small,
+    sub,
+    sup,
+    select,
+    textarea,
+    .font-large6,
+    .font-large5,
+    .font-large4,
+    .font-large3,
+    .font-large2,
+    .font-large1,
+    .font-normal,
+    .font-small1,
+    .font-small2,
+    .font-small3 {
+        font-size: calc(var(--rem) * 1rem);
+        letter-spacing: calc(0.061803 * (1ch / pow(var(--rem), 2.71828) - 1ch));
+    }
+
+    .font-large6 {
+        --rem: 2.5;
+    }
+
+    .font-large5 {
+        --rem: 2.25;
+    }
+
+    .font-large4 {
+        --rem: 2;
+    }
+
+    .font-large3 {
+        --rem: 1.75;
+    }
+
+    .font-large2 {
+        --rem: 1.5;
+    }
+
+    .font-large1 {
+        --rem: 1.25;
+    }
+
+    html,
+    .font-normal {
+        --rem: 1;
+    }
+
+    label,
+    button,
+    input,
+    select,
+    textarea,
+    .font-small1 {
+        --rem: 0.875;
+    }
+
+    small,
+    sub,
+    sup,
+    .font-small2 {
+        --rem: 0.75;
+    }
+
+    .font-small3 {
+        --rem: 0.625;
+    }
+
+    .print-width {
+        max-width: min(50rem, 100% - 24px);
+        margin-inline: auto;
+    }
+
+    div[role="separator"][aria-orientation="vertical"] {
+        border-left: 1px solid gray;
+    }
+}
