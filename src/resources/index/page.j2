@@ -18,7 +18,7 @@
     <br><br>
     <ui-global-element></ui-global-element>
     <h2 class="font-large1">Messages powered by NATS</h2>
-    <form data-on:submit="@post(location.query ?? location.pathname)">
+    <form data-on:submit="$text.trim() && @post(location.query ?? location.pathname)">
         <input type="text" placeholder="Type message..." data-bind:text>
         <button type="submit">Send</button>
     </form>

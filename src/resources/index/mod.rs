@@ -80,7 +80,9 @@ pub async fn post(
     State(AppState { nats }): State<AppState>,
     ReadSignals(signals): ReadSignals<Signals>,
 ) -> impl IntoResponse {
-    nats.publish("messages", signals.text.into()).await.unwrap();
+    nats.publish("messages", signals.text.trim().to_owned().into())
+        .await
+        .unwrap();
     StatusCode::NO_CONTENT
 }
 
