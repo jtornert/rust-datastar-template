@@ -3,7 +3,7 @@ mod index;
 use std::{convert::Infallible, sync::LazyLock};
 
 use async_nats::ConnectErrorKind;
-use axum::{Router, extract::FromRequestParts, http::HeaderMap, routing};
+use axum::{Router, extract::FromRequestParts, http::HeaderMap, middleware, routing};
 use serde::Serialize;
 use tera::{Context, Tera};
 use tokio::sync::RwLock;
@@ -98,7 +98,103 @@ pub fn create_router(state: AppState) -> Router {
     let router = router
         .route("/.hotreload", routing::get(dev::hot_reload))
         .layer(axum::middleware::map_response(dev::no_cache));
-    router
+    router.layer(middleware::from_fn(compression::compress_sse))
+}
+
+mod compression {
+    use std::{
+        io::Write,
+        pin::{Pin, pin},
+        task::{Context, Poll},
+    };
+
+    use axum::{
+        body::{Body, BodyDataStream, Bytes},
+        extract::Request,
+        http::{
+            HeaderValue,
+            header::{ACCEPT_ENCODING, CONTENT_ENCODING, CONTENT_TYPE, VARY},
+        },
+        middleware::Next,
+        response::Response,
+    };
+    use brotli::CompressorWriter;
+    use futures_util::Stream;
+
+    // taken from https://github.com/tokio-rs/axum/discussions/2728#discussioncomment-11919208
+    pub async fn compress_sse(request: Request, next: Next) -> Response {
+        let accept_encoding = request.headers().get(ACCEPT_ENCODING).cloned();
+
+        let response = next.run(request).await;
+
+        let content_encoding = response.headers().get(CONTENT_ENCODING);
+        let content_type = response.headers().get(CONTENT_TYPE);
+
+        // No accept-encoding from client or content-type from server.
+        let (Some(ct), Some(ae)) = (content_type, accept_encoding) else {
+            return response;
+        };
+        // Already compressed.
+        if content_encoding.is_some() {
+            return response;
+        }
+        // Not text/event-stream.
+        if ct.as_bytes() != b"text/event-stream" {
+            return response;
+        }
+        // Client doesn't accept brotli compression.
+        if !ae.to_str().map(|v| v.contains("br")).unwrap_or(false) {
+            return response;
+        }
+
+        let (mut parts, body) = response.into_parts();
+
+        let body = body.into_data_stream();
+        let body = Body::from_stream(CompressedStream::new(body));
+
+        parts
+            .headers
+            .insert(CONTENT_ENCODING, HeaderValue::from_static("br"));
+        parts
+            .headers
+            .insert(VARY, HeaderValue::from_static("accept-encoding"));
+
+        Response::from_parts(parts, body)
+    }
+
+    struct CompressedStream {
+        inner: BodyDataStream,
+        compression: CompressorWriter<Vec<u8>>,
+    }
+
+    impl CompressedStream {
+        pub fn new(body: BodyDataStream) -> Self {
+            Self {
+                inner: body,
+                compression: CompressorWriter::new(Vec::new(), 4096, 11, 22),
+            }
+        }
+    }
+
+    impl Stream for CompressedStream {
+        type Item = Result<Bytes, axum::Error>;
+
+        #[inline]
+        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            match pin!(&mut self.inner).as_mut().poll_next(cx) {
+                Poll::Ready(Some(Ok(x))) => {
+                    self.compression.write_all(&x).unwrap();
+                    self.compression.flush().unwrap();
+
+                    let mut buf = Vec::new();
+                    std::mem::swap(&mut buf, self.compression.get_mut());
+
+                    Poll::Ready(Some(Ok(buf.into())))
+                }
+                x => x,
+            }
+        }
+    }
 }
 
 #[cfg(debug_assertions)]

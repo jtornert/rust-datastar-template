@@ -2470,6 +2470,7 @@ dependencies = [
  "async-nats",
  "asynk-strim",
  "axum",
+ "brotli",
  "datastar",
  "dotenvy",
  "envy",

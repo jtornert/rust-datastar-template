@@ -7,6 +7,7 @@ edition = "2024"
 async-nats = "0.46.0"
 asynk-strim = "0.1.5"
 axum = "0.8.8"
+brotli = "8.0.2"
 datastar = { version = "0.3.1", features = ["axum"] }
 dotenvy = "0.15.7"
 envy = "0.4.2"
