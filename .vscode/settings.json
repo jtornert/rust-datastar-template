@@ -2,5 +2,6 @@
     "emmet.includeLanguages": {
         "jinja-html": "html"
     },
-    "workbench.editor.labelFormat": "short"
+    "workbench.editor.labelFormat": "short",
+    "rust-analyzer.check.command": "clippy"
 }

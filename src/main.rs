@@ -1,3 +1,14 @@
+#![allow(clippy::style)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::nursery)]
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![cfg_attr(debug_assertions, warn(clippy::pedantic))]
+#![cfg_attr(debug_assertions, warn(clippy::nursery))]
+#![cfg_attr(debug_assertions, warn(clippy::unwrap_used))]
+#![cfg_attr(debug_assertions, warn(clippy::expect_used))]
+#![cfg_attr(test, allow(clippy::unwrap_used))]
+
 mod config;
 mod resources;
 

@@ -102,6 +102,8 @@ pub fn create_router(state: AppState) -> Router {
 }
 
 mod compression {
+    //! taken from <https://github.com/tokio-rs/axum/discussions/2728#discussioncomment-11919208>
+
     use std::{
         io::Write,
         pin::{Pin, pin},
@@ -121,7 +123,6 @@ mod compression {
     use brotli::CompressorWriter;
     use futures_util::Stream;
 
-    // taken from https://github.com/tokio-rs/axum/discussions/2728#discussioncomment-11919208
     pub async fn compress_sse(request: Request, next: Next) -> Response {
         let accept_encoding = request.headers().get(ACCEPT_ENCODING).cloned();
 
@@ -198,6 +199,7 @@ mod compression {
 }
 
 #[cfg(debug_assertions)]
+#[allow(clippy::unwrap_used)]
 mod dev {
     use std::{
         convert::Infallible,
@@ -249,7 +251,7 @@ mod dev {
     pub async fn handle_assets(request: Request, next: Next) -> Response {
         let path = request.uri().path().to_owned();
         let response = next.run(request).await;
-        if let StatusCode::NOT_FOUND = response.status() {
+        if response.status() == StatusCode::NOT_FOUND {
             if path.starts_with("/assets/pages") {
                 if path.ends_with(".css") {
                     let file_provider = lightningcss::bundler::FileProvider::new();
@@ -380,14 +382,11 @@ mod dev {
                     .watch(&Path::new("src").join("assets"), RecursiveMode::Recursive)
                     .unwrap();
                 while let Some(result) = rx.recv().await {
-                    let event = match result {
-                        Ok(
-                            event @ notify::Event {
-                                kind: notify::EventKind::Modify(notify::event::ModifyKind::Data(_)),
-                                ..
-                            },
-                        ) => event,
-                        _ => continue,
+                    let Ok(event @ notify::Event {
+                        kind: notify::EventKind::Modify(notify::event::ModifyKind::Data(_)),
+                        ..
+                    }) = result else {
+                        continue;
                     };
                     let Some(path) = event
                         .paths
@@ -401,15 +400,17 @@ mod dev {
                     };
                     match ext {
                         "j2" => {
-                            let mut tera = TEMPLATES.write().await;
-                            tera.add_raw_template(
+                            TEMPLATES
+                                .write()
+                                .await
+                                .add_raw_template(
                                 &path
                                     .strip_prefix("src/resources/")
                                     .unwrap()
                                     .to_string_lossy(),
                                 &std::fs::read_to_string(path).unwrap(),
-                            )
-                            .unwrap();
+                                )
+                                .unwrap();
                             yielder
                                 .yield_item(Ok(ExecuteScript::new("location.reload()")
                                     .write_as_axum_sse_event()))
@@ -422,7 +423,7 @@ mod dev {
                                 } else {
                                     yielder.yield_item(Ok(ExecuteScript::new(
                                     format!(
-                                        r#"(()=>{{const n='{}',e=document.querySelector(`link[href^='${{n}}']`);if(!e)return;const t=e.cloneNode(!0);t.href=`${{n}}?t=${{new Date().valueOf()}}`,document.head.append(t),e.remove()}})();"#,
+                                        "(()=>{{const n='{}',e=document.querySelector(`link[href^='${{n}}']`);if(!e)return;const t=e.cloneNode(!0);t.href=`${{n}}?t=${{new Date().valueOf()}}`,document.head.append(t),e.remove()}})();",
                                         path.to_str().unwrap().trim_start_matches("src")
                                     )).write_as_axum_sse_event()
                                 )).await;
@@ -430,8 +431,8 @@ mod dev {
                             } else if let Ok(path) = path.strip_prefix("src/resources") {
                                 yielder.yield_item(Ok(ExecuteScript::new(
                                     format!(
-                                        r#"(()=>{{const n='{}',e=document.querySelector(`link[href^='${{n}}']`);if(!e)return;const t=e.cloneNode(!0);t.href=`${{n}}?t=${{new Date().valueOf()}}`,document.head.append(t),e.remove()}})();"#,
-                                        format!("/assets/pages/{}", path.to_str().unwrap())
+                                        "(()=>{{const n='/assets/pages/{}',e=document.querySelector(`link[href^='${{n}}']`);if(!e)return;const t=e.cloneNode(!0);t.href=`${{n}}?t=${{new Date().valueOf()}}`,document.head.append(t),e.remove()}})();",
+                                        path.to_str().unwrap()
                                     )).write_as_axum_sse_event()
                                 )).await;
                             }
@@ -439,9 +440,7 @@ mod dev {
                         "ts" => {
                             yielder.yield_item(Ok(ExecuteScript::new("location.reload()").write_as_axum_sse_event())).await;
                         }
-                        _ => {
-                            continue;
-                        }
+                        _ => {}
                     }
                 }
             },

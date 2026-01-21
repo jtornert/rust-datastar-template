@@ -44,12 +44,18 @@ pub async fn get(
     if datastar_request {
         return Sse::new(stream_fn(
             |mut yielder: Yielder<Result<Event, Infallible>>| async move {
-                let mut subscriber = nats.subscribe("messages").await.unwrap();
+                let mut subscriber = match nats.subscribe("messages").await {
+                    Ok(subscriber) => subscriber,
+                    Err(e) => {
+                        tracing::error!(?e);
+                        return;
+                    }
+                };
                 while let Some(message) = subscriber.next().await {
                     yielder
                         .yield_item(Ok(PatchElements::new(
                             Message {
-                                message: String::from_utf8(message.payload.to_vec()).unwrap(),
+                                message: String::from_utf8_lossy(&message.payload).to_string(),
                             }
                             .render()
                             .await,
@@ -80,9 +86,12 @@ pub async fn post(
     State(AppState { nats }): State<AppState>,
     ReadSignals(signals): ReadSignals<Signals>,
 ) -> impl IntoResponse {
-    nats.publish("messages", signals.text.trim().to_owned().into())
+    if let Err(e) = nats
+        .publish("messages", signals.text.trim().to_owned().into())
         .await
-        .unwrap();
+    {
+        tracing::error!(?e);
+    }
     StatusCode::NO_CONTENT
 }
 
