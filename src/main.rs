@@ -1,12 +1,19 @@
 #![allow(clippy::style)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::nursery)]
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![cfg_attr(debug_assertions, warn(clippy::pedantic))]
-#![cfg_attr(debug_assertions, warn(clippy::nursery))]
-#![cfg_attr(debug_assertions, warn(clippy::unwrap_used))]
-#![cfg_attr(debug_assertions, warn(clippy::expect_used))]
+#![deny(
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::unwrap_used,
+    clippy::expect_used
+)]
+#![cfg_attr(
+    debug_assertions,
+    warn(
+        clippy::pedantic,
+        clippy::nursery,
+        clippy::unwrap_used,
+        clippy::expect_used
+    )
+)]
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
 mod config;
@@ -20,6 +27,7 @@ use crate::{
     resources::{AppState, create_router},
 };
 
+#[allow(clippy::unwrap_used)]
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().unwrap();

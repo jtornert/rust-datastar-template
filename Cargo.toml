@@ -33,4 +33,12 @@ minify-html = "0.18.1"
 tokio = { version = "1.49.0", features = ["macros", "rt"] }
 
 [dev-dependencies]
+rand = "0.9.2"
 tower = "0.5.3"
+
+# taken from https://tauri.app/concept/size/
+[profile.release]
+codegen-units = 1 # Allows LLVM to perform better optimization.
+lto = true        # Enables link-time-optimizations.
+opt-level = "s"   # Prioritizes small binary size. Use `3` if you prefer speed.
+strip = true      # Ensures debug symbols are removed.

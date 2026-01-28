@@ -2,6 +2,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
+#[allow(clippy::unwrap_used)]
 pub static CONFIG: LazyLock<Config> = LazyLock::new(|| envy::from_env::<Config>().unwrap());
 
 #[derive(Deserialize)]

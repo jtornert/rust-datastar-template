@@ -3,7 +3,17 @@ mod index;
 use std::{convert::Infallible, sync::LazyLock};
 
 use async_nats::ConnectErrorKind;
-use axum::{Router, extract::FromRequestParts, http::HeaderMap, middleware, routing};
+use asynk_strim::{Yielder, stream_fn};
+use axum::{
+    Router,
+    extract::FromRequestParts,
+    http::HeaderMap,
+    middleware,
+    response::{Sse, sse::Event},
+    routing,
+};
+use datastar::prelude::{ExecuteScript, PatchElements, PatchSignals};
+use futures_util::Stream;
 use serde::Serialize;
 use tera::{Context, Tera};
 use tokio::sync::RwLock;
@@ -11,12 +21,25 @@ use tower_http::{compression::CompressionLayer, services::ServeDir};
 
 use crate::config::CONFIG;
 
+#[allow(clippy::unwrap_used)]
 static TEMPLATES: LazyLock<RwLock<Tera>> = LazyLock::new(|| {
     let mut tera = Tera::new("src/resources/**/*.j2").unwrap();
     #[cfg(debug_assertions)]
     dev::setup_hot_reload(&mut tera);
     RwLock::const_new(tera)
 });
+
+#[cfg(test)]
+mod test_server {
+    use std::{process::Child, sync::LazyLock};
+
+    use rand::Rng;
+    use tokio::sync::OnceCell;
+
+    pub static NATS_PORT: LazyLock<u16> =
+        LazyLock::new(|| rand::rng().random_range(1024..u16::MAX));
+    pub static NATS_TEST_SERVER: OnceCell<Child> = OnceCell::const_new();
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -27,6 +50,35 @@ impl AppState {
     pub async fn from_default_env() -> Result<Self, async_nats::error::Error<ConnectErrorKind>> {
         Ok(Self {
             nats: async_nats::connect(&CONFIG.nats_servers).await?,
+        })
+    }
+
+    #[cfg(test)]
+    pub async fn test_state() -> Result<Self, async_nats::error::Error<ConnectErrorKind>> {
+        test_server::NATS_TEST_SERVER
+            .get_or_init(|| async {
+                use std::{
+                    process::{Command, Stdio},
+                    time::Duration,
+                };
+
+                let child = Command::new("nats-server")
+                    .args([
+                        "--jetstream",
+                        "--port",
+                        &*test_server::NATS_PORT.to_string(),
+                    ])
+                    .stderr(Stdio::null())
+                    .spawn()
+                    .unwrap();
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                child
+            })
+            .await;
+        Ok(Self {
+            nats: async_nats::connect(format!("127.0.0.1:{}", *test_server::NATS_PORT))
+                .await
+                .unwrap(),
         })
     }
 }
@@ -50,6 +102,35 @@ where
                 .get("datastar-request")
                 .is_some_and(|h| h.as_bytes() == b"true"),
         ))
+    }
+}
+
+pub fn datastar_sse<F: Future<Output = ()> + Send>(
+    f: impl FnOnce(DatastarSse) -> F + Send + 'static,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>> + Send> {
+    Sse::new(stream_fn(
+        |yielder: Yielder<Result<Event, Infallible>>| async move {
+            f(DatastarSse(yielder)).await;
+        },
+    ))
+}
+
+pub struct DatastarSse(Yielder<Result<Event, Infallible>>);
+
+#[allow(dead_code)]
+impl DatastarSse {
+    pub async fn patch_elements(&mut self, patch: PatchElements) {
+        self.0.yield_item(Ok(patch.write_as_axum_sse_event())).await;
+    }
+
+    pub async fn patch_signals(&mut self, patch: PatchSignals) {
+        self.0.yield_item(Ok(patch.write_as_axum_sse_event())).await;
+    }
+
+    pub async fn execute_script(&mut self, script: ExecuteScript) {
+        self.0
+            .yield_item(Ok(script.write_as_axum_sse_event()))
+            .await;
     }
 }
 
@@ -199,7 +280,7 @@ mod compression {
 }
 
 #[cfg(debug_assertions)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::case_sensitive_file_extension_comparisons)]
 mod dev {
     use std::{
         convert::Infallible,
@@ -400,9 +481,10 @@ mod dev {
                     };
                     match ext {
                         "j2" => {
-                            TEMPLATES
+                            let mut tera = TEMPLATES
                                 .write()
-                                .await
+                                .await;
+                            tera
                                 .add_raw_template(
                                 &path
                                     .strip_prefix("src/resources/")
@@ -411,10 +493,12 @@ mod dev {
                                 &std::fs::read_to_string(path).unwrap(),
                                 )
                                 .unwrap();
+                            setup_hot_reload(&mut tera);
+                            drop(tera);
                             yielder
-                                .yield_item(Ok(ExecuteScript::new("location.reload()")
-                                    .write_as_axum_sse_event()))
-                                .await;
+                            .yield_item(Ok(ExecuteScript::new("location.reload()")
+                            .write_as_axum_sse_event()))
+                            .await;
                         }
                         "css" => {
                             if path.starts_with("src/assets") {

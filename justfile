@@ -5,7 +5,7 @@ nats:
     nats-server --jetstream --store_dir=data --name=test_server
 
 test:
-    cargo test
+    cargo watch -c -w src -w .env -w Cargo.toml -x test
 
 loc:
     cloc src public build.rs
