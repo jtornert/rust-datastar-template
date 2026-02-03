@@ -187,6 +187,7 @@ async fn build_page_scripts() {
 
 fn main() {
     if std::env::var("PROFILE").is_ok_and(|p| p == "release") {
+        std::fs::remove_dir_all("dist").unwrap();
         build_templates();
         build_global_styles();
         build_page_styles();
