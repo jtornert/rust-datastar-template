@@ -4,8 +4,17 @@ dev:
 nats:
     nats-server --jetstream --store_dir=data --name=test_server
 
-test:
-    cargo watch -c -w src -w .env -w Cargo.toml -x test
+test name="":
+    cargo watch -c -w src -w .env -w Cargo.toml -x "test {{ name }} -- --no-capture --color=always"
+
+check:
+    cargo clippy --release
+
+build:
+    cargo build --release
+
+run:
+    cargo run --release
 
 loc:
     cloc src public build.rs
