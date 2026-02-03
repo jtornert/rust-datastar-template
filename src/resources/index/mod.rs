@@ -5,7 +5,6 @@ use axum::{
 };
 use datastar::{
     axum::ReadSignals,
-    consts::ElementPatchMode,
     prelude::{PatchElements, PatchSignals},
 };
 use futures_util::StreamExt;
@@ -14,19 +13,12 @@ use serde::{Deserialize, Serialize};
 use crate::resources::{AppState, DatastarRequest, Render, ToJson, datastar_sse};
 
 #[derive(Serialize)]
-struct Page {}
+struct Page {
+    text: Option<String>,
+}
 
 impl Render for Page {
     const PATH: &str = "index/page.j2";
-}
-
-#[derive(Serialize)]
-struct Message {
-    message: String,
-}
-
-impl Render for Message {
-    const PATH: &str = "index/partials/message.j2";
 }
 
 #[derive(Serialize, Deserialize)]
@@ -48,18 +40,15 @@ pub async fn get(
         };
         return datastar_sse(|mut sse| async move {
             while let Some(message) = subscriber.next().await {
-                sse.patch_elements(
-                    PatchElements::new(
-                        Message {
-                            message: String::from_utf8_lossy(&message.payload).to_string(),
-                        }
-                        .render()
-                        .await,
-                    )
-                    .mode(ElementPatchMode::Append)
-                    .selector("ul"),
-                )
-                .await;
+                let text = match String::from_utf8(message.payload.to_vec()) {
+                    Ok(text) => text,
+                    Err(e) => {
+                        tracing::error!(?e);
+                        continue;
+                    }
+                };
+                sse.patch_elements(PatchElements::new(Page { text: Some(text) }.render().await))
+                    .await;
                 sse.patch_signals(PatchSignals::new(
                     Signals {
                         text: String::new(),
@@ -72,7 +61,7 @@ pub async fn get(
         .into_response();
     }
 
-    Html(Page {}.render().await).into_response()
+    Html(Page { text: None }.render().await).into_response()
 }
 
 pub async fn post(
@@ -91,6 +80,8 @@ pub async fn post(
 #[cfg(test)]
 mod tests {
 
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use axum::{body::Body, http::Request};
 
     use html5ever::{
@@ -106,7 +97,16 @@ mod tests {
 
     #[tokio::test]
     async fn render() {
-        Page {}.render().await;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_micros();
+        let page = Page {
+            text: Some(now.to_string()),
+        }
+        .render()
+        .await;
+        assert!(page.contains(&now.to_string()));
     }
 
     #[tokio::test]

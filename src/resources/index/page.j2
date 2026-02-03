@@ -14,13 +14,15 @@
 <main class="print-width" data-init="@get(location.query ?? location.pathname)">
     <h1 class="font-large3">{{ title }}</h1>
     <p>This site uses Datastar, click the button below to increase the counter.</p>
-    <button data-text="$counter || 0" data-on:click="$counter++">0</button>
+    <button data-text="$_counter || 0" data-on:click="$_counter++">0</button>
     <ui-global-element></ui-global-element>
-    <h2 class="font-large1">Messages powered by NATS</h2>
-    <form data-on:submit="$text.trim() && @post(location.query ?? location.pathname)">
-        <input type="text" placeholder="Type message..." data-bind:text>
-        <button type="submit">Send</button>
-    </form>
-    <ul></ul>
+    <h2 class="font-large1">Event bus powered by NATS</h2>
+    {% set send_message = "$text.trim() && @post(location.search || location.pathname)" %}
+
+    <input type="text" placeholder="Type text..." data-bind:text
+        data-on:keydown="evt.key === 'Enter' && {{ send_message }}">
+    <button data-on:click="{{ send_message }}">Change text</button>
+    <button data-on:click="$text = ''; @post(location.search || location.pathname)">Reset text</button>
+    <p>{% if text %}{{ text }}{% else %}{% endif %}</p>
 </main>
 {% endblock body %}
