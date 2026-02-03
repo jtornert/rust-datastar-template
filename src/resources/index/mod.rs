@@ -90,10 +90,17 @@ pub async fn post(
 
 #[cfg(test)]
 mod tests {
+
     use axum::{body::Body, http::Request};
+
+    use html5ever::{
+        ParseOpts, parse_document,
+        tendril::{TendrilSink, fmt::Slice},
+    };
+    use markup5ever_rcdom::RcDom;
     use tower::Service;
 
-    use crate::resources::create_router;
+    use crate::resources::{create_router, testing};
 
     use super::*;
 
@@ -110,5 +117,14 @@ mod tests {
         let request = Request::builder().uri("/").body(Body::empty()).unwrap();
         let response = router.call(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let dom = parse_document(RcDom::default(), ParseOpts::default())
+            .from_utf8()
+            .read_from(&mut body.as_bytes())
+            .unwrap();
+        let anchors = testing::find_anchors(&dom.document);
+        testing::check_anchors(&mut router, &anchors).await.unwrap();
     }
 }

@@ -30,6 +30,63 @@ static TEMPLATES: LazyLock<RwLock<Tera>> = LazyLock::new(|| {
 });
 
 #[cfg(test)]
+mod testing {
+    use std::rc::Rc;
+
+    use axum::{Router, body::Body, http::Request};
+    use markup5ever_rcdom::{Node, NodeData};
+    use tower::Service;
+
+    fn walk_dom<F>(element: &Rc<Node>, callback: &mut F)
+    where
+        F: FnMut(&Rc<Node>),
+    {
+        for child in element.children.borrow().iter() {
+            callback(child);
+            if !child.children.borrow().is_empty() {
+                walk_dom(child, callback);
+            }
+        }
+    }
+
+    pub fn find_anchors(element: &Rc<Node>) -> Vec<String> {
+        let mut anchors = Vec::new();
+        walk_dom(element, &mut |child| match &child.data {
+            NodeData::Element { name, attrs, .. } => {
+                if *name.local == *"a" {
+                    anchors.push(
+                        attrs
+                            .borrow()
+                            .iter()
+                            .find(|a| *a.name.local == *"href")
+                            .map(|a| a.value.to_string())
+                            .unwrap(),
+                    );
+                }
+            }
+            _ => {}
+        });
+        anchors
+    }
+
+    pub async fn check_anchors(router: &mut Router, anchors: &Vec<String>) -> Result<(), String> {
+        let mut errors = Vec::new();
+        for anchor in anchors {
+            let request = Request::builder().uri(anchor).body(Body::empty()).unwrap();
+            let response = router.call(request).await.unwrap();
+            if (200..=399).contains(&response.status().as_u16()) {
+                errors.push(anchor.to_owned());
+            }
+        }
+        if !errors.is_empty() {
+            return Err(format!("broken links: {}", anchors.join(", ")));
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
 mod test_server {
     use std::{process::Child, sync::LazyLock};
 
