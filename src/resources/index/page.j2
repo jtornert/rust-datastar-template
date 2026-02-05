@@ -18,7 +18,6 @@
     <ui-global-element></ui-global-element>
     <h2 class="font-large1">Event bus powered by NATS</h2>
     {% set send_message = "$text.trim() && @post(location.search || location.pathname)" %}
-
     <input type="text" placeholder="Type text..." data-bind:text
         data-on:keydown="evt.key === 'Enter' && {{ send_message }}">
     <button data-on:click="{{ send_message }}">Change text</button>

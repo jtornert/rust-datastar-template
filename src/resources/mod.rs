@@ -24,7 +24,7 @@ use crate::config::CONFIG;
 #[allow(clippy::unwrap_used)]
 static TEMPLATES: LazyLock<RwLock<Tera>> = LazyLock::new(|| {
     let mut tera = Tera::new("src/resources/**/*.j2").unwrap();
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "dev")]
     dev::setup_hot_reload(&mut tera);
     RwLock::const_new(tera)
 });
@@ -218,11 +218,11 @@ pub fn create_router(state: AppState) -> Router {
     let router = Router::new()
         .route("/", routing::get(index::get).post(index::post))
         .with_state(state);
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "dev")]
     let router = router
         .nest_service("/assets", ServeDir::new("public"))
         .layer(axum::middleware::from_fn(dev::handle_assets));
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(feature = "dev"))]
     let router = router.nest_service(
         "/assets",
         ServeDir::new("dist/assets").fallback(ServeDir::new("public")),
@@ -232,7 +232,7 @@ pub fn create_router(state: AppState) -> Router {
             .br(true)
             .quality(tower_http::CompressionLevel::Best),
     );
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "dev")]
     let router = router
         .route("/.hotreload", routing::get(dev::hot_reload))
         .layer(axum::middleware::map_response(dev::no_cache));
@@ -336,7 +336,7 @@ mod compression {
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "dev")]
 #[allow(clippy::unwrap_used, clippy::case_sensitive_file_extension_comparisons)]
 mod dev {
     use std::{
