@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-async-nats = "0.46.0"
+async-nats = "0.45.0"
 asynk-strim = "0.1.5"
 axum = "0.8.8"
 brotli = "8.0.2"
@@ -13,8 +13,10 @@ dotenvy = "0.15.7"
 envy = "0.4.2"
 esbuild-rs = { version = "0.13.8", optional = true }
 futures-util = "0.3.31"
+jetstream-extra = "0.2.1"
 lightningcss = { version = "1.0.0-alpha.69", optional = true }
 mime = { version = "0.3.17", optional = true }
+nats_server = { git = "https://github.com/nats-io/nats.rs", package = "nats-server", optional = true }
 notify = "8.2.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
@@ -35,11 +37,12 @@ tokio = { version = "1.49.0", features = ["macros", "rt"] }
 [dev-dependencies]
 html5ever = "0.36.1"
 markup5ever_rcdom = "0.36.0"
+nats_server = { git = "https://github.com/nats-io/nats.rs", package = "nats-server" }
 rand = "0.9.2"
 tower = "0.5.3"
 
 [features]
-dev = ["dep:esbuild-rs", "dep:lightningcss", "dep:mime"]
+dev = ["dep:esbuild-rs", "dep:lightningcss", "dep:mime", "dep:nats_server"]
 
 [profile.release]
 codegen-units = 1

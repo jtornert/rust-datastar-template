@@ -37,6 +37,10 @@ mod testing {
     use markup5ever_rcdom::{Node, NodeData};
     use tower::Service;
 
+    #[cfg(test)]
+    pub fn start_test_server() -> nats_server::Server {
+        nats_server::run_server("nats.test.conf")
+    }
     fn walk_dom<F>(element: &Rc<Node>, callback: &mut F)
     where
         F: FnMut(&Rc<Node>),
@@ -86,18 +90,6 @@ mod testing {
     }
 }
 
-#[cfg(test)]
-mod test_server {
-    use std::{process::Child, sync::LazyLock};
-
-    use rand::Rng;
-    use tokio::sync::OnceCell;
-
-    pub static NATS_PORT: LazyLock<u16> =
-        LazyLock::new(|| rand::rng().random_range(1024..u16::MAX));
-    pub static NATS_TEST_SERVER: OnceCell<Child> = OnceCell::const_new();
-}
-
 #[derive(Clone)]
 pub struct AppState {
     pub nats: async_nats::Client,
@@ -111,31 +103,11 @@ impl AppState {
     }
 
     #[cfg(test)]
-    pub async fn test_state() -> Result<Self, async_nats::error::Error<ConnectErrorKind>> {
-        test_server::NATS_TEST_SERVER
-            .get_or_init(|| async {
-                use std::{
-                    process::{Command, Stdio},
-                    time::Duration,
-                };
-
-                let child = Command::new("nats-server")
-                    .args([
-                        "--jetstream",
-                        "--port",
-                        &*test_server::NATS_PORT.to_string(),
-                    ])
-                    .stderr(Stdio::null())
-                    .spawn()
-                    .unwrap();
-                tokio::time::sleep(Duration::from_millis(500)).await;
-                child
-            })
-            .await;
+    pub async fn test_state(
+        server: &nats_server::Server,
+    ) -> Result<Self, async_nats::error::Error<ConnectErrorKind>> {
         Ok(Self {
-            nats: async_nats::connect(format!("127.0.0.1:{}", *test_server::NATS_PORT))
-                .await
-                .unwrap(),
+            nats: async_nats::connect(server.client_url()).await?,
         })
     }
 }

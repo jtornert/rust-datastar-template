@@ -1,5 +1,7 @@
+use std::net::SocketAddr;
+
 use axum::{
-    extract::State,
+    extract::{ConnectInfo, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
@@ -10,11 +12,14 @@ use datastar::{
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 
-use crate::resources::{AppState, DatastarRequest, Render, ToJson, datastar_sse};
+use crate::{
+    repo::{self, streams::Message},
+    resources::{AppState, DatastarRequest, Render, ToJson, datastar_sse},
+};
 
 #[derive(Serialize)]
 struct Page {
-    text: Option<String>,
+    messages: Vec<Message>,
 }
 
 impl Render for Page {
@@ -30,8 +35,20 @@ pub async fn get(
     State(AppState { nats }): State<AppState>,
     DatastarRequest(datastar_request): DatastarRequest,
 ) -> Response {
+    let ctx = async_nats::jetstream::new(nats);
     if datastar_request {
-        let mut subscriber = match nats.subscribe("messages").await {
+        if let Err(e) = repo::streams::create_or_update_message_stream(&ctx).await {
+            tracing::error!(?e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+        let consumer = match repo::streams::create_message_consumer(&ctx).await {
+            Ok(consumer) => consumer,
+            Err(e) => {
+                tracing::error!(?e);
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+        let mut subscriber = match consumer.messages().await {
             Ok(subscriber) => subscriber,
             Err(e) => {
                 tracing::error!(?e);
@@ -40,14 +57,19 @@ pub async fn get(
         };
         return datastar_sse(|mut sse| async move {
             while let Some(message) = subscriber.next().await {
-                let text = match String::from_utf8(message.payload.to_vec()) {
-                    Ok(text) => text,
+                if let Err(e) = message {
+                    tracing::error!(?e);
+                    continue;
+                }
+                let messages = match repo::streams::get_latest_messages(&ctx).await {
+                    Ok(messages) => messages,
                     Err(e) => {
                         tracing::error!(?e);
+                        // TODO add notification
                         continue;
                     }
                 };
-                sse.patch_elements(PatchElements::new(Page { text: Some(text) }.render().await))
+                sse.patch_elements(PatchElements::new(Page { messages }.render().await))
                     .await;
                 sse.patch_signals(PatchSignals::new(
                     Signals {
@@ -61,18 +83,39 @@ pub async fn get(
         .into_response();
     }
 
-    Html(Page { text: None }.render().await).into_response()
+    Html(
+        Page {
+            messages: match repo::streams::get_latest_messages(&ctx).await {
+                Ok(messages) => messages,
+                Err(e) => {
+                    tracing::error!(?e);
+                    Vec::new()
+                }
+            },
+        }
+        .render()
+        .await,
+    )
+    .into_response()
 }
 
 pub async fn post(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(AppState { nats }): State<AppState>,
     ReadSignals(signals): ReadSignals<Signals>,
 ) -> impl IntoResponse {
-    if let Err(e) = nats
-        .publish("messages", signals.text.trim().to_owned().into())
-        .await
-    {
-        tracing::error!(?e);
+    let ctx = async_nats::jetstream::new(nats);
+    let message = signals.text.trim().to_owned();
+    if !message.is_empty() {
+        if let Err(e) = ctx
+            .publish(
+                format!("{}.{}", repo::streams::STREAM_MESSAGES_SUBJECT, addr),
+                message.into(),
+            )
+            .await
+        {
+            tracing::error!(?e);
+        }
     }
     StatusCode::NO_CONTENT
 }
@@ -102,17 +145,22 @@ mod tests {
             .unwrap()
             .as_micros();
         let page = Page {
-            text: Some(now.to_string()),
+            messages: vec![Message {
+                text: now.to_string(),
+                deadline: (now + 1).to_string(),
+            }],
         }
         .render()
         .await;
         assert!(page.contains(&now.to_string()));
+        assert!(page.contains(&(now + 1).to_string()));
     }
 
     #[tokio::test]
     async fn get_page() {
         dotenvy::dotenv().ok();
-        let state = AppState::test_state().await.unwrap();
+        let server = testing::start_test_server();
+        let state = AppState::test_state(&server).await.unwrap();
         let mut router = create_router(state);
         let request = Request::builder().uri("/").body(Body::empty()).unwrap();
         let response = router.call(request).await.unwrap();

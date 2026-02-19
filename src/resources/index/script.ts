@@ -10,3 +10,13 @@ document.addEventListener("datastar-fetch", (e) => {
             ?.after(" Page scripts enabled! ");
     }
 });
+
+const interval = setInterval(() => {
+    for (const el of document.querySelectorAll<HTMLElement>(
+        "[data-deadline]",
+    )) {
+        if (new Date(el.dataset.deadline!) < new Date()) {
+            el.remove();
+        }
+    }
+}, 1000);

@@ -17,13 +17,18 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
 mod config;
+mod error;
+mod repo;
 mod resources;
+
+use std::net::SocketAddr;
 
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
 
 use crate::{
     config::CONFIG,
+    error::Error,
     resources::{AppState, create_router},
 };
 
@@ -40,5 +45,10 @@ async fn main() {
     let router = create_router(AppState::from_default_env().await.unwrap());
     let listener = TcpListener::bind(&CONFIG.listen_url).await.unwrap();
     tracing::info!("{}", CONFIG.listen_url);
-    axum::serve(listener, router).await.unwrap();
+    axum::serve(
+        listener,
+        router.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }
