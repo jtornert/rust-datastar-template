@@ -24,7 +24,7 @@
     <button data-on:click="{{ send_message }}">Send message</button>
     <ul>
         {% for message in messages %}
-        <li data-deadline="{{ message.deadline }}">{{ message.text }}</li>
+        <li data-deadline="{{ message.deadline }}">{{ message.text }} <small>{{ message.sender }}</small></li>
         {% endfor %}
     </ul>
 </main>

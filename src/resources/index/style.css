@@ -1,3 +1,7 @@
 p {
     font-style: italic;
 }
+
+small {
+    opacity: 0.5;
+}

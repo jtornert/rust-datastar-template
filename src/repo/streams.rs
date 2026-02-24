@@ -44,6 +44,7 @@ pub async fn create_message_consumer(
 pub struct Message {
     pub text: String,
     pub deadline: String,
+    pub sender: String,
 }
 
 pub async fn get_latest_messages(
@@ -122,7 +123,17 @@ pub async fn get_latest_messages(
                         return futures_util::future::ready(None);
                     }
                 };
-                futures_util::future::ready(Some(Message { text, deadline }))
+                let sender = if let Some((_, sender)) = m.subject.split_once('.') {
+                    sender.into()
+                } else {
+                    tracing::error!("no sender found: {}", m.subject);
+                    return futures_util::future::ready(None);
+                };
+                futures_util::future::ready(Some(Message {
+                    text,
+                    deadline,
+                    sender,
+                }))
             }
             Err(e) => {
                 tracing::error!(?e);

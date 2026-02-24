@@ -148,6 +148,7 @@ mod tests {
             messages: vec![Message {
                 text: now.to_string(),
                 deadline: (now + 1).to_string(),
+                sender: "127.0.0.1:12345".to_string(),
             }],
         }
         .render()
